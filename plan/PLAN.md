@@ -46,6 +46,7 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 | 2 — Thin Frontend | *(completed, no separate file)* | ✅ Done |
 | 3 — Simulation Engine | *(completed, no separate file)* | ✅ Done |
 | 4 — Resource Data Plugins | *(completed, no separate file)* | ✅ Done |
+| 4b — Crisis API | *(completed, no separate file)* | ✅ Done |
 | 5 — Real Air Quality (GIOŚ) | [PHASE-5-gios.md](PHASE-5-gios.md) | 🔲 Not started |
 | 6 — AI Classification & Voice | [PHASE-6-ai-voice.md](PHASE-6-ai-voice.md) | 🔲 Not started |
 | 7 — useMaps Integration | [PHASE-7-usemaps.md](PHASE-7-usemaps.md) | 🔲 Not started |
@@ -76,6 +77,14 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 - 1 791 total resources; 663 within 50 km of Puławy
 - `routers/resources.py` — `/api/resources` + `/api/resources/calculator`
 - Real Lublin voivodeship boundary from Nominatim OSM (16 814-point polygon)
+
+### Phase 4b — Crisis API ✅
+- `services/crisis_store.py` — in-memory CrisisEvent store (type, lat, lon, name, radii, status, source)
+- `services/spatial.py` — `haversine()`, `circle_polygon()`, `facilities_in_zones()`
+- `routers/crisis.py` — `POST/GET/PATCH/DELETE /api/v1/crisis` + stats + affected + geojson
+- `routers/fires_compat.py` — `/api/v1/fires` alias (operator script compatibility)
+- `routers/v1_layers.py` — `/api/v1/layers/hospitals|schools|social-facilities|air-quality|weather`
+- `main.py` — register new routers (v0.5.0)
 
 ---
 

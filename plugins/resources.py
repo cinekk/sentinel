@@ -31,10 +31,19 @@ def _load_data() -> dict:
         return json.load(f)
 
 
+_DISPLAY_TYPES = {
+    "hospital": "Szpital",
+    "school": "Szkoła",
+    "social": "DPS/Placówka",
+    "fire_station": "Straż Pożarna",
+}
+
+
 def _make_feature(record: dict, resource_type: str, idx: int) -> dict:
     props = {k: v for k, v in record.items() if k not in ("lat", "lon")}
     props["type"] = resource_type
     props["id"] = f"{resource_type}_{idx}"
+    props["display_type"] = _DISPLAY_TYPES.get(resource_type, resource_type)
     return {
         "type": "Feature",
         "geometry": {
