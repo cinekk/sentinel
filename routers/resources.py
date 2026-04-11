@@ -69,8 +69,10 @@ async def resource_calculator(
         t = r.get("type", "unknown")
         by_type[t] = by_type.get(t, 0) + 1
 
-    # sum hospital beds in radius
-    beds_total = sum(r.get("beds") or 0 for r in in_radius if r.get("type") == "hospital")
+    hospitals_in_radius = [r for r in in_radius if r.get("type") == "hospital"]
+    beds_total = sum(r.get("beds") or 0 for r in hospitals_in_radius)
+    icu_beds = sum(r.get("icu_oiom_beds") or 0 for r in hospitals_in_radius)
+    beds_available = sum(r.get("beds_available_estimate") or 0 for r in hospitals_in_radius)
 
     return {
         "center": {"lat": lat, "lon": lon},
@@ -78,5 +80,7 @@ async def resource_calculator(
         "total": len(in_radius),
         "by_type": by_type,
         "hospital_beds": beds_total,
+        "hospital_icu_beds": icu_beds,
+        "hospital_beds_available": beds_available,
         "resources": in_radius,
     }

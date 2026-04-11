@@ -11,11 +11,10 @@ from plugins.resources import (
 from routers.resources import _haversine_km
 
 
-# ── Plugin structure ──────────────────────────────────────────────────────────
+# ── Non-DB plugins (data.json / hardcoded) ────────────────────────────────────
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("plugin_cls,expected_type,min_count", [
-    (HospitalsPlugin,     "hospital",     50),
     (SocialPlugin,        "social",       250),
     (SchoolsPlugin,       "school",       1400),
     (FireStationsPlugin,  "fire_station", 10),
@@ -29,7 +28,6 @@ async def test_plugin_returns_feature_collection(plugin_cls, expected_type, min_
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("plugin_cls,expected_type", [
-    (HospitalsPlugin,    "hospital"),
     (SocialPlugin,       "social"),
     (SchoolsPlugin,      "school"),
     (FireStationsPlugin, "fire_station"),
@@ -65,8 +63,54 @@ async def test_all_plugins_have_distinct_layer_ids():
     assert len(ids) == 4
 
 
+# ── Hospitals plugin (SQLite-backed) ──────────────────────────────────────────
+
 @pytest.mark.asyncio
-async def test_hospitals_coords_in_lublin_voivodeship():
+async def test_hospitals_returns_feature_collection(db_session):
+    plugin = HospitalsPlugin()
+    fc = await plugin.fetch()
+    assert fc["type"] == "FeatureCollection"
+    assert len(fc["features"]) >= 30
+
+
+@pytest.mark.asyncio
+async def test_hospitals_feature_has_required_props(db_session):
+    plugin = HospitalsPlugin()
+    fc = await plugin.fetch()
+    feature = fc["features"][0]
+
+    assert feature["type"] == "Feature"
+    assert feature["geometry"]["type"] == "Point"
+    coords = feature["geometry"]["coordinates"]
+    assert len(coords) == 2
+
+    lon, lat = coords
+    assert -180 <= lon <= 180
+    assert -90 <= lat <= 90
+
+    props = feature["properties"]
+    assert props.get("type") == "hospital"
+    assert isinstance(props.get("name"), str)
+    assert isinstance(props.get("id"), str)
+
+
+@pytest.mark.asyncio
+async def test_hospitals_have_enriched_fields(db_session):
+    """Hospitals from SQLite should have NFZ/MZ 3.3 fields."""
+    plugin = HospitalsPlugin()
+    fc = await plugin.fetch()
+    props = fc["features"][0]["properties"]
+
+    assert "beds_total_physical" in props
+    assert "has_sor" in props
+    assert "icu_oiom_beds" in props
+    assert "specializations" in props
+    assert "operator" in props
+    assert props["beds_total_physical"] > 0
+
+
+@pytest.mark.asyncio
+async def test_hospitals_coords_in_lublin_voivodeship(db_session):
     """All hospital coords should be roughly within the voivodeship bounding box."""
     plugin = HospitalsPlugin()
     fc = await plugin.fetch()

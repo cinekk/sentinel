@@ -2,6 +2,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from sqlalchemy import select
+
+from database import HospitalRow, SessionLocal
 from plugins.base import BasePlugin
 
 _DATA_PATH = Path(__file__).parent.parent / "data.json"
@@ -54,6 +57,58 @@ def _make_feature(record: dict, resource_type: str, idx: int) -> dict:
     }
 
 
+_HOSPITAL_SKIP_COLS = {"id", "latitude", "longitude"}
+
+
+def _hospital_row_to_dict(row: HospitalRow) -> dict:
+    return {
+        k: v for k, v in {
+            "lat": row.latitude,
+            "lon": row.longitude,
+            "facility_id": row.facility_id,
+            "name": row.name,
+            "short_name": row.short_name,
+            "hospital_type": row.type,
+            "operator": row.operator,
+            "nfz_contract": row.nfz_contract,
+            "street": row.street,
+            "city": row.city,
+            "postal_code": row.postal_code,
+            "gmina": row.gmina,
+            "powiat": row.powiat,
+            "has_sor": row.has_sor,
+            "has_pediatric_sor": row.has_pediatric_sor,
+            "has_izba_przyjec": row.has_izba_przyjec,
+            "sor_throughput_per_day": row.sor_throughput_per_day,
+            "decontamination_entry": row.decontamination_entry,
+            "isolation_rooms": row.isolation_rooms,
+            "negative_pressure_rooms": row.negative_pressure_rooms,
+            "beds_total_physical": row.beds_total_physical,
+            "beds_available_estimate": row.beds_available_estimate,
+            "beds_occupied_pct": row.beds_occupied_pct,
+            "icu_oiom_beds": row.icu_oiom_beds,
+            "ventilator_capable_beds": row.ventilator_capable_beds,
+            "ecmo_available": row.ecmo_available,
+            "dialysis_stations": row.dialysis_stations,
+            "burn_unit": row.burn_unit,
+            "neonatal_icu": row.neonatal_icu,
+            "operating_rooms": row.operating_rooms,
+            "polytrauma_capable": row.polytrauma_capable,
+            "ct_24_7": row.ct_24_7,
+            "mri_available": row.mri_available,
+            "helipad": row.helipad,
+            "helipad_type": row.helipad_type,
+            "backup_power": row.backup_power,
+            "backup_power_fuel_hours": row.backup_power_fuel_hours,
+            "phone_24h_sor": row.phone_24h_sor,
+            "email": row.email,
+            "specializations": row.specializations,
+            "beds": row.beds_total_physical,
+            "emergency": row.has_sor,
+        }.items()
+    }
+
+
 class HospitalsPlugin(BasePlugin):
     layer_id = "hospitals"
     layer_name = "Szpitale"
@@ -61,10 +116,12 @@ class HospitalsPlugin(BasePlugin):
 
     async def fetch(self) -> dict:
         self._last_updated = datetime.now(timezone.utc)
-        data = _load_data()
+        async with SessionLocal() as session:
+            result = await session.execute(select(HospitalRow))
+            rows = result.scalars().all()
         features = [
-            _make_feature(r, "hospital", i)
-            for i, r in enumerate(data["hospitals"])
+            _make_feature(_hospital_row_to_dict(r), "hospital", i)
+            for i, r in enumerate(rows)
         ]
         return {"type": "FeatureCollection", "features": features}
 
