@@ -14,14 +14,26 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: GITHUB_TOKEN,GITHUB_REPOSITORY
+          envs: GITHUB_TOKEN,GITHUB_REPOSITORY,GITHUB_REF_NAME
           script: |
             REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
             if [ ! -d ~/sentinel/.git ]; then
-              git clone "$REPO_URL" ~/sentinel
+              git clone -b "$GITHUB_REF_NAME" "$REPO_URL" ~/sentinel
             fi
             cd ~/sentinel
             git remote set-url origin "$REPO_URL"
-            git pull origin main
+            git fetch origin "$GITHUB_REF_NAME"
+            git checkout "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
             docker compose build --no-cache
             docker compose up -d
+
+      - name: Health check
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://sentinel.xd.ventures/api/health || true)
+          if [ "$STATUS" = "200" ]; then
+            echo "Health check passed (HTTP $STATUS)"
+          else
+            echo "::warning::Health check returned HTTP $STATUS (site may still be starting)"
+          fi
