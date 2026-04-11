@@ -13,7 +13,6 @@ It powers a thin owned frontend and optionally syncs to external consumers:
 
 Core concept: **hexagonal architecture with pluggable data sources.**
 Each plugin declares a layer, fetches/generates data, and the core serves it uniformly.
-The frontend is just another consumer — it can be swapped for any GIS tool.
 Demo scenario: **Zestaw D — industrial fire / smog crisis** in Lublin voivodeship.
 
 ---
@@ -41,71 +40,51 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 
 ## Phases
 
-### Phase 1 — Core Foundation ✅
-> Goal: running FastAPI server, DB, plugin base, one working endpoint
+| Phase | File | Status |
+|---|---|---|
+| 1 — Core Foundation | *(completed, no separate file)* | ✅ Done |
+| 2 — Thin Frontend | *(completed, no separate file)* | ✅ Done |
+| 3 — Simulation Engine | *(completed, no separate file)* | ✅ Done |
+| 4 — Resource Data Plugins | *(completed, no separate file)* | ✅ Done |
+| 4b — Crisis API | *(completed, no separate file)* | ✅ Done |
+| 5 — Real Air Quality (GIOŚ) | [PHASE-5-gios.md](PHASE-5-gios.md) | 🔲 Not started |
+| 6 — AI Classification & Voice | [PHASE-6-ai-voice.md](PHASE-6-ai-voice.md) | 🔲 Not started |
+| 7 — useMaps Integration | [PHASE-7-usemaps.md](PHASE-7-usemaps.md) | 🔲 Not started |
+| 8 — Polish & Demo | [PHASE-8-demo.md](PHASE-8-demo.md) | 🔲 Not started |
 
-- [x] `requirements.txt` + `.env.example`
-- [x] `database.py` — SQLAlchemy async, SQLite, `EventRow`, `init_db()`
-- [x] `models.py` — Pydantic schemas: `EventOut`, `EventCreate`, `IngestRequest`, `IngestResponse`, `ResourceOut`, `LayerMeta`, `SimulationConfig`, `ThreatZone`
-- [x] `plugins/base.py` — `BasePlugin` ABC: `layer_id`, `layer_name`, `data_type`, `async fetch() -> GeoJSON FeatureCollection`
-- [x] `plugins/__init__.py` + `PluginRegistry`
-- [x] `routers/events.py` — `GET /api/events` (flat JSON, Grafana-ready)
-- [x] `main.py` — FastAPI app, CORS, lifespan startup (`init_db`, register plugins), mount `/static`
-- [x] Smoke test: server starts, `GET /api/events` returns `[]`
+---
+
+## Completed phases summary
+
+### Phase 1 — Core Foundation ✅
+- `requirements.txt`, `.env.example`, `database.py`, `models.py`
+- `plugins/base.py` — `BasePlugin` ABC + `PluginRegistry`
+- `routers/events.py` — `GET /api/events`
+- `main.py` — FastAPI app, CORS, lifespan startup
 
 ### Phase 2 — Thin Frontend ✅
-> Goal: map visible in browser showing Lublin voivodeship; proves API is consumable by any client
-
-- [x] `frontend/index.html` — single file, Leaflet from CDN, no build step
-  - [x] Lublin voivodeship + powiaty boundary rendered as base layer
-  - [x] Layer panel: lists all layers from `GET /api/layers`, toggle each on/off
-  - [x] Each layer fetched from `GET /api/layers/{id}/geojson` and rendered as GeoJSON overlay
-  - [x] Auto-refresh every 30s with last-updated timestamp visible
-  - [x] Popup on feature click: shows event/resource details
-- [x] `main.py` — serve `frontend/` as `StaticFiles` at `/`
-- [x] Smoke test: open browser, see map with voivodeship outline, toggle a layer
+- `frontend/index.html` — single-file Leaflet app, CDN, no build step
+- Lublin voivodeship + powiaty boundary, layer panel, auto-refresh 30s, popups
 
 ### Phase 3 — Simulation Engine ✅
-> Goal: triggerable fire scenario that generates live events and a spreading threat zone
-
-- [x] `plugins/simulation.py` — `SimulationPlugin`
-  - [x] Scenario config: source lat/lon, wind speed, wind direction, fire intensity, tick interval
-  - [x] Background async task: ticks every N seconds
-  - [x] Each tick: advance plume, emit synthetic PM2.5/PM10 readings, generate `EventRow`
-  - [x] Threat zone: directional ellipse polygon (source + wind vector + time elapsed)
-  - [x] On each tick: call `spatial.check_intersections(threat_zone, resources)` → emit targeted alerts
-- [x] `routers/simulation.py`
-  - [x] `POST /api/simulation/start` — accepts `SimulationConfig`, starts background task
-  - [x] `POST /api/simulation/stop`
-  - [x] `GET /api/simulation/state` — current tick, threat zone GeoJSON, active events count
-- [x] `services/spatial.py` — `check_intersections(threat_zone, resources)` → targeted alerts
-- [x] Preset scenario: industrial fire at Puławy (chemical plant area), wind NE at 15 km/h
+- `plugins/simulation.py` — background task, plume spreading, threat zone ellipse
+- `routers/simulation.py` — start/stop/state endpoints
+- `services/spatial.py` — `check_intersections(threat_zone, resources)`
+- Preset: Puławy chemical plant, wind NE 15 km/h
 
 ### Phase 4 — Resource Data Plugins ✅
-> Goal: real resource data on the map; threat zone has real hospitals/schools/DPS to intersect
-> Rationale: spatial alerts (Phase 3) are blind without real named objects to intersect.
-> Branch: `feature/data-plugins-initial`
-
-- [x] `plugins/resources.py` — **one plugin class per resource type** (all in one file)
-  - Architecture: `layer_id` is the stable contract; plugin class is the swappable implementation.
-    Swap `data.json` → CSIOZ/GUS/PSP API later by replacing only the relevant class.
-  - [x] `HospitalsPlugin` (layer_id=`hospitals`) — 57 entries from `data.json` → GeoJSON points
-  - [x] `SocialPlugin` (layer_id=`social`) — 259 entries from `data.json` → GeoJSON points
-  - [x] `SchoolsPlugin` (layer_id=`schools`) — 1 460 entries from `data.json` → GeoJSON points
-  - [x] `FireStationsPlugin` (layer_id=`fire_stations`) — 15 hardcoded mock PSP/OSP units
-- [x] **Fix voivodeship boundary** — replaced hand-drawn polygon with real GeoJSON
-  - [x] Source: Nominatim OSM (16 814 point polygon)
-  - [x] `frontend/geojson/lublin_voivodeship.geojson` — static file
-  - [x] `MockBoundaryPlugin` loads from file + appends powiaty centroids
-- [x] `routers/resources.py`
-  - [x] `GET /api/resources` — flat list with `type` field (Grafana can filter/group by type)
-  - [x] `GET /api/resources/calculator?lat=&lon=&radius_km=&type=` — count resources in radius (+10 bonus)
-    - Returns `total`, `by_type`, `hospital_beds`, full `resources` list
-- [x] Smoke test: 1 791 total resources loaded; 663 within 50km of Puławy (27 hospitals, 100 DPS, 531 schools, 5 stations)
+- `plugins/resources.py` — `HospitalsPlugin`, `SocialPlugin`, `SchoolsPlugin`, `FireStationsPlugin`
+- 1 791 total resources; 663 within 50 km of Puławy
+- `routers/resources.py` — `/api/resources` + `/api/resources/calculator`
+- Real Lublin voivodeship boundary from Nominatim OSM (16 814-point polygon)
 
 ### Phase 4b — Crisis API ✅
-> Goal: unified `/api/v1/crisis` store + operator-facing endpoints
-> Note: Grafana was dropped; these endpoints serve the owned frontend and future operator tooling.
+- `services/crisis_store.py` — in-memory CrisisEvent store (type, lat, lon, name, radii, status, source)
+- `services/spatial.py` — `haversine()`, `circle_polygon()`, `facilities_in_zones()`
+- `routers/crisis.py` — `POST/GET/PATCH/DELETE /api/v1/crisis` + stats + affected + geojson
+- `routers/fires_compat.py` — `/api/v1/fires` alias (operator script compatibility)
+- `routers/v1_layers.py` — `/api/v1/layers/hospitals|schools|social-facilities|air-quality|weather`
+- `main.py` — register new routers (v0.5.0)
 
 - [x] `services/crisis_store.py` — in-memory CrisisEvent store (type, lat, lon, name, radii, status, source)
 - [x] `services/spatial.py` — add `haversine()`, `circle_polygon()`, `facilities_in_zones()`
@@ -196,28 +175,7 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 
 ---
 
-## Side quests coverage
-
-| Quest | How SENTINEL covers it | Points |
-|---|---|---|
-| **Marshal (10k PLN)** | Owned Leaflet map + layers + simulation + resources + threat zones + voice | Main prize |
-| **ElevenLabs** | STT voice ingest + TTS alert broadcast + voice command assistant | Side quest |
-| **Comtegra** (offline LLM) | `LLMRouter` Ollama fallback — system fully operational without internet | Side quest |
-
-### Marshal bonus features coverage
-
-| Bonus | Implementation | Points |
-|---|---|---|
-| Public data scraping | `GIOSPlugin` — real PM2.5/PM10 from `powietrze.gios.gov.pl` | +10 |
-| Resource calculator | `GET /api/resources/calculator` + map UI widget | +10 |
-| Voice assistant | `POST /api/voice/command` + ElevenLabs TTS | +10 |
-| Social media agents | Not planned — skip | — |
-
-**Projected score: ~84/100 base + 30 bonus = ~114/140**
-
----
-
-## Key API surface (final)
+## Key API surface
 
 ```
 GET  /api/events                          Grafana flat JSON feed
@@ -239,14 +197,12 @@ GET  /                                    Leaflet map frontend
 
 ---
 
-## Open questions / decisions deferred
+## Open questions
 
 - [ ] useMaps layer IDs — need to be created in useMaps UI first; get IDs from teammate
 - [ ] useMaps instance URL — confirm with teammate (env var `USEMAPS_BASE_URL`)
 - [ ] Grafana exact datasource plugin — teammate to confirm; we expose both flat JSON and GeoJSON
-- [ ] Voivodeship GeoJSON source — GUGiK BDOT10k download or Overpass `relation/130919`
 - [ ] Ollama model availability on demo machine — confirm `qwen2.5:14b` is pulled
-- [ ] GIOŚ station IDs near Puławy — use `GET https://api.gios.gov.pl/pjp-api/v1/rest/station/findAll`, filter by coords
 
 ---
 
@@ -254,48 +210,52 @@ GET  /                                    Leaflet map frontend
 
 ```
 sentinel/
-  main.py                    FastAPI app, CORS, startup, static mount
-  models.py                  Pydantic schemas
-  database.py                SQLite setup, get_db
-  config.py                  Settings / env vars
-  data.json                  Source data: hospitals (57), schools (1460), social_facilities (259)
+  main.py
+  models.py
+  database.py
+  config.py
+  data.json                  hospitals (57), schools (1460), social_facilities (259)
   plugins/
     base.py                  BasePlugin ABC
     __init__.py              PluginRegistry
     mock_boundary.py         Lublin voivodeship boundary + powiaty centroids
-    simulation.py            SimulationPlugin (synthetic fire scenario) [Phase 3] ✅
-    resources.py             ResourcePlugin (hospitals, DPS, schools, PSP) [Phase 4]
-    gios.py                  GIOSPlugin (real PM2.5/PM10 from GIOŚ API) [Phase 5]
+    simulation.py            SimulationPlugin ✅
+    resources.py             HospitalsPlugin, SocialPlugin, SchoolsPlugin, FireStationsPlugin ✅
+    gios.py                  GIOSPlugin [Phase 5]
   routers/
-    events.py                GET/POST /api/events
-    layers.py                GET /api/layers, GET /api/layers/{id}/geojson
-    simulation.py            POST /api/simulation/start|stop, GET /api/simulation/state [Phase 3] ✅
-    resources.py             GET /api/resources, GET /api/resources/calculator [Phase 4]
+    events.py                GET/POST /api/events ✅
+    layers.py                GET /api/layers, GET /api/layers/{id}/geojson ✅
+    simulation.py            simulation start/stop/state ✅
+    resources.py             /api/resources + calculator ✅
     ingest.py                POST /api/ingest [Phase 6]
-    voice.py                 POST /api/voice, POST /api/voice/command [Phase 6]
+    voice.py                 POST /api/voice, /api/voice/command [Phase 6]
     sync.py                  POST /api/sync [Phase 7]
   services/
-    spatial.py               check_intersections(threat_zone, resources) → list[Alert] [Phase 3] ✅
-    ai.py                    classify_event() → ClassificationResult [Phase 6]
-    llm.py                   LLMRouter (Claude → Ollama) [Phase 6]
-    tts.py                   ElevenLabs TTS + STT [Phase 6]
-    usemaps.py               UseMapsClient (auth, push, coord transform) [Phase 7]
+    spatial.py               check_intersections() ✅
+    ai.py                    classify_event() [Phase 6]
+    llm.py                   LLMRouter [Phase 6]
+    tts.py                   ElevenLabs TTS+STT [Phase 6]
+    usemaps.py               UseMapsClient [Phase 7]
     sync.py                  SyncService [Phase 7]
   frontend/
-    index.html               Leaflet map, layer toggles, region filter, auto-refresh
-    app.js                   Frontend logic [Phase 3] ✅
-    style.css                Styles [Phase 3] ✅
+    index.html               Leaflet map ✅
+    app.js                   ✅
+    style.css                ✅
     geojson/
-      lublin_voivodeship.geojson   Real boundary from GUGiK/Overpass [Phase 4]
+      lublin_voivodeship.geojson ✅
   scripts/
-    seed_demo.py             Load Puławy fire scenario + synthetic events [Phase 8]
+    seed_demo.py             [Phase 8]
   tests/
     conftest.py
     test_api.py
     test_plugins.py
-    test_simulation.py       [Phase 3] ✅
-    test_spatial.py          [Phase 3] ✅
+    test_simulation.py       ✅
+    test_spatial.py          ✅
   plan/
-    PLAN.md                  ← this file
-    DEMO_SCRIPT.md           5-minute jury demo walkthrough [Phase 8]
+    PLAN.md                  ← this index
+    PHASE-5-gios.md
+    PHASE-6-ai-voice.md
+    PHASE-7-usemaps.md
+    PHASE-8-demo.md
+    DEMO_SCRIPT.md           [Phase 8]
 ```
