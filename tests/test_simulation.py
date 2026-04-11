@@ -13,8 +13,7 @@ async def test_state_idle(sim_client: AsyncClient):
     state = r.json()
     assert state["running"] is False
     assert state["tick"] == 0
-    assert state["threat_zone"] is None
-    assert state["alerts"] == []
+    assert state["crisis_id"] is None
 
 
 async def test_state_has_config(sim_client: AsyncClient):
@@ -99,4 +98,4 @@ async def test_reset_clears_state(sim_client: AsyncClient):
     state = (await sim_client.get("/api/simulation/state")).json()
     assert state["running"] is False
     assert state["tick"] == 0
-    assert state["threat_zone"] is None
+    assert state["crisis_id"] is None

@@ -97,6 +97,10 @@ class CrisisEvent(BaseModel):
     name: str
     evac_radius_km: float = 5.0
     warn_radius_km: float = 12.0
+    zone_shape: Literal["circle", "ellipse"] = "circle"
+    semi_major_km: float | None = None   # ellipse only — downwind extent
+    semi_minor_km: float | None = None   # ellipse only — crosswind extent
+    bearing_deg: float | None = None     # ellipse only — wind direction (0=N)
     status: str = "active"
     source: str = "operator"
     created_at: float
@@ -109,6 +113,10 @@ class CrisisEventCreate(BaseModel):
     name: str = "Pożar"
     evac_radius_km: float = 5.0
     warn_radius_km: float = 12.0
+    zone_shape: Literal["circle", "ellipse"] = "circle"
+    semi_major_km: float | None = None
+    semi_minor_km: float | None = None
+    bearing_deg: float | None = None
     status: str = "active"
     source: str = "operator"
 
@@ -117,4 +125,8 @@ class CrisisEventPatch(BaseModel):
     name: str | None = None
     evac_radius_km: float | None = None
     warn_radius_km: float | None = None
+    zone_shape: str | None = None
+    semi_major_km: float | None = None
+    semi_minor_km: float | None = None
+    bearing_deg: float | None = None
     status: str | None = None

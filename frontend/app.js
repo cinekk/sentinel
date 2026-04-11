@@ -456,10 +456,19 @@ async function updateSimState() {
     }
 
     tick.textContent = state.tick > 0 ? `T+${state.tick}` : '';
-
-    renderAlertHud(state.alerts || []);
   } catch (e) {
     console.warn('Sim state fetch failed:', e);
+  }
+}
+
+async function pollAlerts() {
+  try {
+    const res = await fetch(`${API}/api/v1/crisis/affected`);
+    if (!res.ok) return;
+    const alerts = await res.json();
+    renderAlertHud(alerts);
+  } catch (e) {
+    console.warn('Alert poll failed:', e);
   }
 }
 
@@ -476,5 +485,7 @@ document.getElementById('btn-clear-events').addEventListener('click', async () =
 
 refresh();
 updateSimState();
+pollAlerts();
 setInterval(refresh, 30_000);
 setInterval(updateSimState, 10_000);
+setInterval(pollAlerts, 5_000);

@@ -10,6 +10,8 @@ from typing import Literal
 
 AlertLevel = Literal["approaching", "inside"]
 
+SPREAD_RATE_KM_PER_TICK = 0.05
+
 
 def _point_in_ellipse(
     px: float, py: float,
@@ -29,63 +31,6 @@ def _point_in_ellipse(
 
 def _deg_to_rad(deg: float) -> float:
     return deg * math.pi / 180.0
-
-
-def check_intersections(
-    threat_zone: dict,
-    resources: list[dict],
-) -> list[dict]:
-    """
-    Given a threat_zone GeoJSON Feature and a list of resource dicts,
-    return alerts for resources that are approaching or inside the zone.
-
-    threat_zone properties must include:
-        center_lat, center_lon, semi_major_km, semi_minor_km, bearing_deg
-
-    Each resource dict must include:
-        id, name, type, latitude, longitude
-
-    Returns list of alert dicts:
-        resource_id, resource_name, resource_type, level, action
-    """
-    props = threat_zone.get("properties", {})
-    cx = props.get("center_lon", 0.0)
-    cy = props.get("center_lat", 0.0)
-    semi_major = props.get("semi_major_km", 1.0)
-    semi_minor = props.get("semi_minor_km", 0.5)
-    bearing_deg = props.get("bearing_deg", 0.0)
-
-    # Convert km to approximate degrees (1 deg lat ≈ 111 km)
-    semi_major_deg = semi_major / 111.0
-    semi_minor_deg = semi_minor / 111.0
-
-    # Wind bearing: meteorological (0=N, 90=E) → math angle from +x axis
-    bearing_rad = _deg_to_rad(90.0 - bearing_deg)
-
-    alerts: list[dict] = []
-
-    for resource in resources:
-        px = resource.get("longitude", 0.0)
-        py = resource.get("latitude", 0.0)
-
-        inside = _point_in_ellipse(px, py, cx, cy, semi_major_deg, semi_minor_deg, bearing_rad)
-        approaching = not inside and _point_in_ellipse(
-            px, py, cx, cy,
-            semi_major_deg * 1.5, semi_minor_deg * 1.5,
-            bearing_rad,
-        )
-
-        if inside or approaching:
-            level: AlertLevel = "inside" if inside else "approaching"
-            alerts.append({
-                "resource_id": resource.get("id"),
-                "resource_name": resource.get("name", "Unknown"),
-                "resource_type": resource.get("type", "unknown"),
-                "level": level,
-                "action": _recommended_action(resource.get("type", ""), level),
-            })
-
-    return alerts
 
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -126,11 +71,31 @@ _CRISIS_ACTION_MATRIX: dict[tuple[str, str], str] = {
 }
 
 
+def _facility_alert_level(flat: float, flon: float, event) -> str | None:
+    """Return 'inside', 'approaching', or None for a facility vs a crisis event."""
+    if event.zone_shape == "ellipse" and event.semi_major_km:
+        semi_major_deg = event.semi_major_km / 111.0
+        semi_minor_deg = event.semi_minor_km / 111.0
+        bearing_rad = _deg_to_rad(90.0 - (event.bearing_deg or 0.0))
+        if _point_in_ellipse(flon, flat, event.lon, event.lat, semi_major_deg, semi_minor_deg, bearing_rad):
+            return "inside"
+        if _point_in_ellipse(flon, flat, event.lon, event.lat, semi_major_deg * 1.5, semi_minor_deg * 1.5, bearing_rad):
+            return "approaching"
+        return None
+    else:
+        d = haversine(flat, flon, event.lat, event.lon)
+        if d <= event.evac_radius_km:
+            return "inside"
+        if d <= event.warn_radius_km:
+            return "approaching"
+        return None
+
+
 def facilities_in_zones(crisis_events: list, facilities: list[dict]) -> list[dict]:
     """
-    For each facility, find the nearest active crisis event that puts it in a zone.
+    For each facility, find the active crisis event that puts it closest to a zone.
 
-    crisis_events: objects with .lat, .lon, .evac_radius_km, .warn_radius_km, .id, .name
+    crisis_events: CrisisEvent objects (circle or ellipse zone_shape)
     facilities: GeoJSON Feature dicts from resource plugins
 
     Returns list of affected-facility dicts sorted by distance_km.
@@ -148,35 +113,36 @@ def facilities_in_zones(crisis_events: list, facilities: list[dict]) -> list[dic
             continue
 
         best_dist = float("inf")
-        best_zone: str | None = None
+        best_level: str | None = None
         best_event = None
 
         for event in crisis_events:
-            d = haversine(flat, flon, event.lat, event.lon)
-            if d <= event.evac_radius_km:
-                zone = "evac"
-            elif d <= event.warn_radius_km:
-                zone = "warn"
-            else:
+            level = _facility_alert_level(flat, flon, event)
+            if level is None:
                 continue
+            d = haversine(flat, flon, event.lat, event.lon)
             if d < best_dist:
                 best_dist = d
-                best_zone = zone
+                best_level = level
                 best_event = event
 
         if best_event is None:
             continue
 
+        zone = "evac" if best_level == "inside" else "warn"
+        fname = props.get("name", "")
         results.append({
             "facility_id": props.get("id", ""),
-            "name": props.get("name", ""),
+            "name": fname,
+            "resource_name": fname,           # HUD compat
             "type": ftype,
             "display_type": _DISPLAY_TYPES.get(ftype, ftype),
             "lat": flat,
             "lon": flon,
             "distance_km": round(best_dist, 2),
-            "zone": best_zone,
-            "action": _CRISIS_ACTION_MATRIX.get((ftype, best_zone), "ALERT"),
+            "zone": zone,
+            "level": best_level,              # HUD compat
+            "action": _CRISIS_ACTION_MATRIX.get((ftype, zone), "ALERT"),
             "crisis_id": best_event.id,
             "crisis_name": best_event.name,
         })

@@ -115,6 +115,17 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 - [x] `plugins/resources.py` — add `display_type` property (`"Szpital"`, `"Szkoła"`, `"DPS/Placówka"`)
 - [x] `main.py` — register new routers (v0.5.0)
 
+### Phase 4c — Unified Crisis/Simulation Architecture
+> Goal: simulation writes to crisis_store; all alerts go through one path; ellipse zones replace circles for simulation
+> Detail: `plan/phase-4c-unified-crisis.md`
+
+- [x] `models.py` — add `zone_shape`, `semi_major_km`, `semi_minor_km`, `bearing_deg` to `CrisisEvent` / `CrisisEventCreate` / `CrisisEventPatch`
+- [x] `services/spatial.py` — extend `facilities_in_zones` to handle ellipse shape; add `level` + `resource_name` to returned dicts; delete `check_intersections`
+- [x] `plugins/simulation.py` — on start: `crisis_store.add(...)` with `zone_shape="ellipse"`; each tick: `crisis_store.patch(...)` growing ellipse; stop/reset update status; drop `self._alerts` and `self._threat_zone`
+- [x] `routers/simulation.py` — drop `alerts` + `threat_zone` from `GET /api/simulation/state`
+- [x] `frontend/app.js` — remove `renderAlertHud(state.alerts)` from simulation poll; add independent `/api/v1/crisis/affected` poller for HUD
+- [ ] Smoke test: manual crisis event + simulation event both show in HUD via same endpoint
+
 ### Phase 5 — Real Air Quality Data (GIOŚ)
 > Goal: real PM2.5/PM10 displayed alongside simulation — earns +10 bonus points
 
