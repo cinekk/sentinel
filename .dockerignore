@@ -1,0 +1,11 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+.env
+sentinel.db
+analysis/
+plan/
+tests/
+.claude/
+.pytest_cache/
