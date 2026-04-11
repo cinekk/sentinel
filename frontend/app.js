@@ -1,5 +1,17 @@
 const API = '';  // same origin
 
+// ── Sidebar tabs ──────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.stab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`.tab-panel[data-panel="${tab}"]`).classList.add('active');
+  });
+});
+
 // ── Map init ──────────────────────────────────────────────────────────────────
 
 const map = L.map('map', { center: [51.25, 22.57], zoom: 8, zoomControl: false });
@@ -80,6 +92,30 @@ const LAYER_TYPE_CLASS = {
   flood_zone:  'flood_zone',
 };
 
+const LAYER_TYPE_COLOR = {
+  events:      '#ef4444',  // red
+  simulation:  '#f97316',  // orange
+  air_quality: '#10b981',  // emerald
+  resources:   '#a855f7',  // purple (fallback)
+  flood_zone:  '#0ea5e9',  // sky blue
+  boundary:    '#6b7280',  // gray
+  threat_zone: '#f59e0b',  // amber
+};
+
+// Per-layer overrides (take priority over data_type color above)
+const LAYER_ID_COLOR = {
+  hospitals:    '#f43f5e',  // rose   – medical
+  schools:      '#eab308',  // yellow – education
+  social:       '#14b8a6',  // teal   – social care
+  fire_stations:'#f97316',  // orange – fire/rescue
+};
+
+const DEFAULT_CLUSTER_COLOR = '#3b82f6';
+
+function clusterColor(layerId, dataType) {
+  return LAYER_ID_COLOR[layerId] ?? LAYER_TYPE_COLOR[dataType] ?? DEFAULT_CLUSTER_COLOR;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatTime(iso) {
@@ -138,15 +174,18 @@ function popupHtml(props, allowedKeys, labelMap) {
 
 // ── Cluster icon factory ──────────────────────────────────────────────────────
 
-function clusterIconFactory(cluster) {
-  const count = cluster.getChildCount();
-  const size  = count < 10 ? 32 : count < 100 ? 38 : 44;
-  return L.divIcon({
-    html: `<div class="cluster-icon" style="width:${size}px;height:${size}px">${count}</div>`,
-    className: '',
-    iconSize: L.point(size, size),
-    iconAnchor: L.point(size / 2, size / 2),
-  });
+function makeClusterIconFactory(color) {
+  const c = color || DEFAULT_CLUSTER_COLOR;
+  return function(cluster) {
+    const count = cluster.getChildCount();
+    const size  = count < 10 ? 32 : count < 100 ? 38 : 44;
+    return L.divIcon({
+      html: `<div class="cluster-icon" style="width:${size}px;height:${size}px;--cc:${c};box-shadow:0 0 10px ${c}66,inset 0 0 6px ${c}20">${count}</div>`,
+      className: '',
+      iconSize: L.point(size, size),
+      iconAnchor: L.point(size / 2, size / 2),
+    });
+  };
 }
 
 // ── Layer rendering ───────────────────────────────────────────────────────────
@@ -255,7 +294,7 @@ async function fetchAndRenderLayer(id) {
             chunkedLoading: true,
             maxClusterRadius: 60,
             showCoverageOnHover: false,
-            iconCreateFunction: clusterIconFactory,
+            iconCreateFunction: makeClusterIconFactory(clusterColor(id, layerMeta[id]?.data_type)),
           })
         : L.layerGroup();
     }
@@ -518,7 +557,7 @@ function renderEventMarkers(events) {
       chunkedLoading: true,
       maxClusterRadius: 50,
       showCoverageOnHover: false,
-      iconCreateFunction: clusterIconFactory,
+      iconCreateFunction: makeClusterIconFactory(LAYER_TYPE_COLOR.events),
     }).addTo(map);
   }
   layerGroups['__events__'].clearLayers();
@@ -729,14 +768,17 @@ async function updateSimState() {
     const label = document.getElementById('sim-label');
     const tick  = document.getElementById('sim-tick');
 
+    const simTabBadge = document.getElementById('sim-tab-badge');
     if (state.running) {
       dot.className      = 'running';
       label.textContent  = 'AKTYWNA';
-      label.className    = 'running';
+      label.className    = 'sim-status-label running';
+      if (simTabBadge) simTabBadge.style.display = '';
     } else {
       dot.className      = '';
       label.textContent  = state.tick > 0 ? 'ZATRZYMANA' : 'GOTOWA';
-      label.className    = '';
+      label.className    = 'sim-status-label';
+      if (simTabBadge) simTabBadge.style.display = 'none';
     }
 
     tick.textContent = state.tick > 0 ? `T+${state.tick}` : '';
