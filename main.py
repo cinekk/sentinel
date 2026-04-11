@@ -19,6 +19,7 @@ from routers.layers import router as layers_router
 from routers.resources import router as resources_router
 from routers.simulation import router as simulation_router
 from routers.v1_layers import router as v1_layers_router
+from routers.voice import router as voice_router
 
 
 @asynccontextmanager
@@ -52,6 +53,7 @@ app.include_router(crisis_router)
 app.include_router(fires_compat_router)
 app.include_router(v1_layers_router)
 app.include_router(assistant_router)
+app.include_router(voice_router)
 
 
 @app.get("/api/health")

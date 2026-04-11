@@ -820,10 +820,202 @@ function initChat() {
   });
 }
 
+// ── Voice Briefing (karaoke) ──────────────────────────────────────────────────
+
+let briefingAudio = null;
+let briefingWords = [];
+let briefingWordEls = [];
+let briefingBusy = false;
+let briefingTimer = null;   // fallback interval when no audio
+let briefingStartTs = 0;    // performance.now() at play start
+let briefingDuration = 0;
+let briefingPausedAt = 0;   // elapsed seconds when paused
+let briefingHasAudio = false;
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function briefingCurrentTime() {
+  if (briefingHasAudio && briefingAudio) return briefingAudio.currentTime;
+  return briefingPausedAt + (performance.now() - briefingStartTs) / 1000;
+}
+
+function briefingSyncLoop() {
+  const playing = briefingHasAudio
+    ? (briefingAudio && !briefingAudio.paused)
+    : (briefingTimer !== null);
+  if (!playing) return;
+
+  const t = briefingCurrentTime();
+  const dur = briefingDuration || 1;
+
+  for (let i = 0; i < briefingWords.length; i++) {
+    const w = briefingWords[i];
+    const el = briefingWordEls[i];
+    if (!el) continue;
+    if (t >= w.start && t <= w.end) {
+      el.className = 'briefing-word speaking';
+    } else if (t > w.end) {
+      el.className = 'briefing-word spoken';
+    } else {
+      el.className = 'briefing-word';
+    }
+  }
+
+  const bar = document.getElementById('briefing-bar');
+  const time = document.getElementById('briefing-time');
+  if (bar) bar.style.width = `${Math.min((t / dur) * 100, 100)}%`;
+  if (time) time.textContent = `${fmtTime(Math.min(t, dur))} / ${fmtTime(dur)}`;
+
+  if (t >= dur) {
+    stopBriefingTimer();
+    document.getElementById('briefing-play').textContent = '▶';
+    return;
+  }
+  requestAnimationFrame(briefingSyncLoop);
+}
+
+function stopBriefingTimer() {
+  if (briefingTimer !== null) { clearInterval(briefingTimer); briefingTimer = null; }
+}
+
+function renderBriefingWords(words) {
+  const container = document.getElementById('briefing-text');
+  container.innerHTML = '';
+  briefingWordEls = [];
+  for (const w of words) {
+    const span = document.createElement('span');
+    span.className = 'briefing-word';
+    span.textContent = w.word + ' ';
+    container.appendChild(span);
+    briefingWordEls.push(span);
+  }
+}
+
+function showBriefingWidget() {
+  document.getElementById('briefing-widget').classList.remove('hidden');
+}
+
+function hideBriefingWidget() {
+  document.getElementById('briefing-widget').classList.add('hidden');
+  if (briefingAudio) { briefingAudio.pause(); briefingAudio = null; }
+  stopBriefingTimer();
+  briefingWords = [];
+  briefingWordEls = [];
+  briefingPausedAt = 0;
+  briefingHasAudio = false;
+  const bar = document.getElementById('briefing-bar');
+  if (bar) bar.style.width = '0%';
+  document.getElementById('briefing-time').textContent = '0:00 / 0:00';
+  document.getElementById('briefing-play').textContent = '▶';
+}
+
+async function requestBriefing() {
+  if (briefingBusy) return;
+  briefingBusy = true;
+
+  const btn = document.getElementById('briefing-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  try {
+    const res = await fetch(`${API}/api/voice/briefing`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.text();
+      alert(`Briefing error: ${err}`);
+      return;
+    }
+    const data = await res.json();
+    briefingWords = data.words;
+    briefingDuration = data.duration_seconds;
+    briefingPausedAt = 0;
+    renderBriefingWords(data.words);
+    showBriefingWidget();
+
+    if (data.audio_base64) {
+      briefingHasAudio = true;
+      const raw = atob(data.audio_base64);
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'audio/mpeg' });
+      const blobUrl = URL.createObjectURL(blob);
+      briefingAudio = new Audio(blobUrl);
+      briefingAudio.addEventListener('ended', () => {
+        document.getElementById('briefing-play').textContent = '▶';
+        URL.revokeObjectURL(blobUrl);
+      });
+      try {
+        await briefingAudio.play();
+        document.getElementById('briefing-play').textContent = '⏸';
+        requestAnimationFrame(briefingSyncLoop);
+      } catch (e) {
+        console.warn('[BRIEFING] autoplay blocked, click ▶:', e);
+      }
+    } else {
+      briefingHasAudio = false;
+      briefingAudio = null;
+      // Text-only: auto-start timer animation
+      briefingStartTs = performance.now();
+      briefingPausedAt = 0;
+      briefingTimer = setInterval(() => {}, 50);
+      document.getElementById('briefing-play').textContent = '⏸';
+      requestAnimationFrame(briefingSyncLoop);
+    }
+  } catch (e) {
+    console.error('Briefing fetch failed:', e);
+    alert('Nie udało się wygenerować briefingu.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📢';
+    briefingBusy = false;
+  }
+}
+
+function toggleBriefingPlay() {
+  const btn = document.getElementById('briefing-play');
+
+  if (briefingHasAudio && briefingAudio) {
+    if (briefingAudio.paused) {
+      briefingAudio.play();
+      btn.textContent = '⏸';
+      requestAnimationFrame(briefingSyncLoop);
+    } else {
+      briefingAudio.pause();
+      btn.textContent = '▶';
+    }
+  } else {
+    if (briefingTimer !== null) {
+      briefingPausedAt = briefingCurrentTime();
+      stopBriefingTimer();
+      btn.textContent = '▶';
+    } else {
+      briefingStartTs = performance.now();
+      briefingTimer = setInterval(() => {}, 50);
+      btn.textContent = '⏸';
+      requestAnimationFrame(briefingSyncLoop);
+    }
+  }
+}
+
+function initBriefing() {
+  const btn = document.getElementById('briefing-btn');
+  if (btn) btn.addEventListener('click', requestBriefing);
+
+  const playBtn = document.getElementById('briefing-play');
+  if (playBtn) playBtn.addEventListener('click', toggleBriefingPlay);
+
+  const closeBtn = document.getElementById('briefing-close');
+  if (closeBtn) closeBtn.addEventListener('click', hideBriefingWidget);
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 fetchLayerSchemas();
 initChat();
+initBriefing();
 refresh();
 updateSimState();
 pollAlerts();

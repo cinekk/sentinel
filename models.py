@@ -154,3 +154,18 @@ class CrisisEventPatch(BaseModel):
     semi_minor_km: float | None = None
     bearing_deg: float | None = None
     status: str | None = None
+
+
+# --- Voice Briefing models ---
+
+class BriefingWordTiming(BaseModel):
+    word: str
+    start: float
+    end: float
+
+
+class BriefingResponse(BaseModel):
+    audio_base64: str
+    words: list[BriefingWordTiming]
+    text: str
+    duration_seconds: float

@@ -81,6 +81,19 @@
         <div id="chat-input-row">
           <input type="text" id="chat-input" placeholder="np. Pożar w Puławach, wiatr NE…" autocomplete="off" />
           <button id="chat-send" title="Wyślij">▶</button>
+          <button id="briefing-btn" title="Briefing głosowy">📢</button>
+        </div>
+      </div>
+      <div id="briefing-widget" class="briefing-widget hidden">
+        <div class="briefing-header">
+          <span class="briefing-title">BRIEFING SYTUACYJNY</span>
+          <button id="briefing-play" class="briefing-ctrl">▶</button>
+          <button id="briefing-close" class="briefing-ctrl">✕</button>
+        </div>
+        <div id="briefing-text" class="briefing-text"></div>
+        <div class="briefing-progress">
+          <div id="briefing-bar" class="briefing-bar"></div>
+          <span id="briefing-time">0:00 / 0:00</span>
         </div>
       </div>
     </div>
