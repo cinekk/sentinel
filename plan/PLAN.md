@@ -56,15 +56,15 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 ### Phase 2 — Thin Frontend
 > Goal: map visible in browser showing Lublin voivodeship; proves API is consumable by any client
 
-- [ ] `frontend/index.html` — single file, Leaflet from CDN, no build step
-  - [ ] Lublin voivodeship + powiaty boundary rendered as base layer
-  - [ ] Layer panel: lists all layers from `GET /api/layers`, toggle each on/off
-  - [ ] Each layer fetched from `GET /api/layers/{id}/geojson` and rendered as GeoJSON overlay
-  - [ ] Auto-refresh every 30s with last-updated timestamp visible
-  - [ ] Powiat/gmina filter — click on area to filter events to that region
-  - [ ] Popup on feature click: shows event/resource details
-- [ ] `main.py` — serve `frontend/` as `StaticFiles` at `/`
-- [ ] Smoke test: open browser, see map with voivodeship outline, toggle a layer
+- [x] `frontend/index.html` — single file, Leaflet from CDN, no build step
+  - [x] Lublin voivodeship + powiaty boundary rendered as base layer
+  - [x] Layer panel: lists all layers from `GET /api/layers`, toggle each on/off
+  - [x] Each layer fetched from `GET /api/layers/{id}/geojson` and rendered as GeoJSON overlay
+  - [x] Auto-refresh every 30s with last-updated timestamp visible
+  - [x] Powiat/gmina filter — click on area to filter events to that region
+  - [x] Popup on feature click: shows event/resource details
+- [x] `main.py` — serve `frontend/` as `StaticFiles` at `/`
+- [x] Smoke test: open browser, see map with voivodeship outline, toggle a layer
 
 ### Phase 3 — Simulation Engine
 > Goal: triggerable fire scenario that generates live events and a spreading threat zone
