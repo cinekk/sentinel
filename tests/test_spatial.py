@@ -58,9 +58,9 @@ def test_empty_resources_returns_empty():
 def test_multiple_resources_mixed():
     zone = make_zone(semi_major_km=5.0, semi_minor_km=2.0)
     resources = [
-        make_resource(1, "Centrum",   "hospital",    51.4158, 21.9698),  # inside
-        make_resource(2, "Daleko",    "school",      52.0,    22.5),     # outside
-        make_resource(3, "Blisko DPS","care_home",   51.4158, 21.9698),  # inside
+        make_resource(1, "Centrum",   "hospital", 51.4158, 21.9698),  # inside
+        make_resource(2, "Daleko",    "school",   52.0,    22.5),     # outside
+        make_resource(3, "Blisko DPS","social",   51.4158, 21.9698),  # inside
     ]
     alerts = check_intersections(zone, resources)
     assert len(alerts) == 2
@@ -95,14 +95,14 @@ def test_inside_beats_approaching():
 # ── Action strings ────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("rtype,level,expected_fragment", [
-    ("school",      "inside",      "ewakuuj"),
-    ("school",      "approaching", "ewakuacj"),
-    ("care_home",   "inside",      "DPS"),
-    ("care_home",   "approaching", "DPS"),
-    ("hospital",    "inside",      "Ewakuacja"),
-    ("hospital",    "approaching", "oddział"),
-    ("fire_station","inside",      "Wycofaj"),
-    ("fire_station","approaching", "gotowości"),
+    ("school",        "inside",      "ewakuuj"),
+    ("school",        "approaching", "ewakuacj"),
+    ("social",        "inside",      "DPS"),
+    ("social",        "approaching", "DPS"),
+    ("hospital",      "inside",      "Ewakuacja"),
+    ("hospital",      "approaching", "oddział"),
+    ("fire_station",  "inside",      "Wycofaj"),
+    ("fire_station",  "approaching", "gotowości"),
 ])
 def test_action_strings(rtype, level, expected_fragment):
     from services.spatial import _recommended_action
