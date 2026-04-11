@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SENTINEL — Situational Awareness</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a0e1a;
+      color: #c8d6e5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      background: #0d1321;
+      border-bottom: 1px solid #1e2d45;
+      z-index: 1000;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #e74c3c;
+      text-transform: uppercase;
+    }
+
+    header .subtitle {
+      font-size: 0.75rem;
+      color: #5d7a9a;
+    }
+
+    #status-bar {
+      margin-left: auto;
+      font-size: 0.7rem;
+      color: #5d7a9a;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    #status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #27ae60;
+      display: inline-block;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #map {
+      flex: 1;
+    }
+
+    #sidebar {
+      width: 260px;
+      background: #0d1321;
+      border-left: 1px solid #1e2d45;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-section {
+      padding: 12px;
+      border-bottom: 1px solid #1e2d45;
+    }
+
+    .sidebar-section h3 {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #5d7a9a;
+      margin-bottom: 8px;
+    }
+
+    #layer-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-size: 0.8rem;
+    }
+
+    .layer-item:hover { background: #1a2538; }
+
+    .layer-item input[type="checkbox"] {
+      accent-color: #e74c3c;
+      cursor: pointer;
+    }
+
+    .layer-badge {
+      margin-left: auto;
+      font-size: 0.65rem;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: #1e2d45;
+      color: #5d7a9a;
+    }
+
+    #event-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .event-card {
+      background: #111927;
+      border: 1px solid #1e2d45;
+      border-left: 3px solid #555;
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .event-card:hover { border-color: #e74c3c; }
+    .event-card.severity-critical { border-left-color: #e74c3c; }
+    .event-card.severity-high     { border-left-color: #e67e22; }
+    .event-card.severity-medium   { border-left-color: #f1c40f; }
+    .event-card.severity-low      { border-left-color: #27ae60; }
+
+    .event-title {
+      font-weight: 600;
+      margin-bottom: 3px;
+      color: #c8d6e5;
+    }
+
+    .event-meta {
+      color: #5d7a9a;
+      font-size: 0.68rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #3a4f6a;
+      font-size: 0.75rem;
+      padding: 24px 8px;
+    }
+
+    #refresh-info {
+      padding: 8px 12px;
+      font-size: 0.65rem;
+      color: #3a4f6a;
+      border-top: 1px solid #1e2d45;
+    }
+
+    /* Severity colors for map markers */
+    .marker-critical { color: #e74c3c; }
+    .marker-high     { color: #e67e22; }
+    .marker-medium   { color: #f1c40f; }
+    .marker-low      { color: #27ae60; }
+
+    /* Leaflet popup dark theme */
+    .leaflet-popup-content-wrapper {
+      background: #0d1321;
+      border: 1px solid #1e2d45;
+      color: #c8d6e5;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+
+    .leaflet-popup-tip { background: #0d1321; }
+
+    .popup-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+      color: #e8eef5;
+    }
+
+    .popup-row {
+      font-size: 0.75rem;
+      color: #7a96b2;
+      margin: 2px 0;
+    }
+
+    .popup-row span { color: #c8d6e5; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚠ SENTINEL</h1>
+    <div class="subtitle">Platforma Świadomości Sytuacyjnej — Województwo Lubelskie</div>
+  </div>
+  <div id="status-bar">
+    <span><span id="status-dot"></span> LIVE</span>
+    <span id="last-updated">odświeżanie...</span>
+    <span id="event-count">— zdarzeń</span>
+  </div>
+</header>
+
+<div id="main">
+  <div id="map"></div>
+
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <h3>Warstwy</h3>
+      <div id="layer-list">
+        <div class="empty-state">Ładowanie warstw…</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="flex:0">
+      <h3>Zdarzenia</h3>
+    </div>
+    <div id="event-list">
+      <div class="empty-state">Brak zdarzeń</div>
+    </div>
+
+    <div id="refresh-info">Auto-odświeżanie co 30s</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API = '';  // same origin
+
+// ── Map init ────────────────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [51.25, 22.57],
+  zoom: 8,
+  zoomControl: true,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 18,
+}).addTo(map);
+
+// ── State ───────────────────────────────────────────────────────────────────
+const layerGroups = {};   // layer_id → L.LayerGroup
+const layerEnabled = {};  // layer_id → bool
+const layerMeta = {};     // layer_id → meta object
+let allEvents = [];
+
+// ── Severity colours ─────────────────────────────────────────────────────────
+const severityColor = {
+  critical: '#e74c3c',
+  high:     '#e67e22',
+  medium:   '#f1c40f',
+  low:      '#27ae60',
+};
+
+const categoryIcon = {
+  fire:           '🔥',
+  flood:          '🌊',
+  medical:        '🏥',
+  hazmat:         '☢️',
+  security:       '🚨',
+  infrastructure: '⚡',
+  other:          '⚠️',
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function formatTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+}
+
+function popupHtml(props) {
+  if (!props) return '<div class="popup-title">Brak danych</div>';
+  const rows = Object.entries(props)
+    .map(([k, v]) => `<div class="popup-row">${k}: <span>${v}</span></div>`)
+    .join('');
+  return `<div class="popup-title">${props.name || props.description || props.layer_id || 'Obiekt'}</div>${rows}`;
+}
+
+// ── Layer rendering ──────────────────────────────────────────────────────────
+function styleForFeature(feature) {
+  const type = feature.properties?.type;
+  const severity = feature.properties?.severity;
+  if (type === 'voivodeship') {
+    return { color: '#2980b9', weight: 2, fillColor: '#1a3a5c', fillOpacity: 0.08 };
+  }
+  if (type === 'threat_zone') {
+    return { color: '#e74c3c', weight: 2, fillColor: '#e74c3c', fillOpacity: 0.15 };
+  }
+  const color = severityColor[severity] || '#5d7a9a';
+  return { color, weight: 2, fillColor: color, fillOpacity: 0.2 };
+}
+
+function pointToLayer(feature, latlng) {
+  const type = feature.properties?.type;
+  const severity = feature.properties?.severity;
+  const category = feature.properties?.category;
+
+  if (type === 'powiat') {
+    return L.circleMarker(latlng, {
+      radius: 3, color: '#2980b9', fillColor: '#2980b9', fillOpacity: 0.6, weight: 1
+    });
+  }
+
+  const color = severityColor[severity] || '#5d7a9a';
+  const icon = categoryIcon[category] || '📍';
+  return L.marker(latlng, {
+    icon: L.divIcon({
+      html: `<div style="font-size:1.4rem;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.7))">${icon}</div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      className: '',
+    }),
+  });
+}
+
+async function fetchAndRenderLayer(id) {
+  try {
+    const res = await fetch(`${API}/api/layers/${id}/geojson`);
+    if (!res.ok) return;
+    const geojson = await res.json();
+
+    if (layerGroups[id]) {
+      layerGroups[id].clearLayers();
+    } else {
+      layerGroups[id] = L.layerGroup();
+    }
+
+    const geoLayer = L.geoJSON(geojson, {
+      style: styleForFeature,
+      pointToLayer,
+      onEachFeature(feature, layer) {
+        layer.bindPopup(popupHtml(feature.properties), { maxWidth: 280 });
+        layer.on('click', () => {
+          if (feature.properties?.type === 'powiat') {
+            filterEventsByPowiat(feature.properties.name);
+          }
+        });
+      },
+    });
+
+    layerGroups[id].addLayer(geoLayer);
+
+    if (layerEnabled[id]) {
+      if (!map.hasLayer(layerGroups[id])) {
+        layerGroups[id].addTo(map);
+      }
+    }
+  } catch (e) {
+    console.warn(`Failed to fetch layer ${id}:`, e);
+  }
+}
+
+// ── Events panel ─────────────────────────────────────────────────────────────
+function renderEvents(events) {
+  const list = document.getElementById('event-list');
+  if (!events.length) {
+    list.innerHTML = '<div class="empty-state">Brak zdarzeń</div>';
+    return;
+  }
+  list.innerHTML = events.map(ev => `
+    <div class="event-card severity-${ev.severity}" data-lat="${ev.latitude}" data-lon="${ev.longitude}">
+      <div class="event-title">${categoryIcon[ev.category] || '⚠️'} ${ev.description}</div>
+      <div class="event-meta">${ev.category} · ${ev.severity} · ${formatTime(ev.time)}</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.event-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const lat = parseFloat(card.dataset.lat);
+      const lon = parseFloat(card.dataset.lon);
+      if (lat && lon) map.setView([lat, lon], 12);
+    });
+  });
+
+  document.getElementById('event-count').textContent = `${events.length} zdarzeń`;
+}
+
+function filterEventsByPowiat(name) {
+  // Placeholder — in Phase 5 filter by region
+  console.log('Filter by powiat:', name);
+}
+
+// ── Layer control panel ───────────────────────────────────────────────────────
+function renderLayerPanel(layers) {
+  const list = document.getElementById('layer-list');
+  if (!layers.length) {
+    list.innerHTML = '<div class="empty-state">Brak warstw</div>';
+    return;
+  }
+
+  list.innerHTML = layers.map(layer => `
+    <label class="layer-item">
+      <input type="checkbox" id="toggle-${layer.layer_id}" ${layerEnabled[layer.layer_id] ? 'checked' : ''} />
+      <span>${layer.name}</span>
+      <span class="layer-badge">${layer.data_type}</span>
+    </label>
+  `).join('');
+
+  layers.forEach(layer => {
+    const cb = document.getElementById(`toggle-${layer.layer_id}`);
+    cb.addEventListener('change', () => {
+      layerEnabled[layer.layer_id] = cb.checked;
+      const group = layerGroups[layer.layer_id];
+      if (!group) return;
+      if (cb.checked) {
+        group.addTo(map);
+      } else {
+        map.removeLayer(group);
+      }
+    });
+  });
+}
+
+// ── Main refresh ──────────────────────────────────────────────────────────────
+async function refresh() {
+  try {
+    // Fetch layer list
+    const layersRes = await fetch(`${API}/api/layers`);
+    if (layersRes.ok) {
+      const layers = await layersRes.json();
+
+      // Init new layers as enabled by default
+      layers.forEach(l => {
+        if (!(l.layer_id in layerEnabled)) {
+          layerEnabled[l.layer_id] = true;
+        }
+        layerMeta[l.layer_id] = l;
+      });
+
+      renderLayerPanel(layers);
+      await Promise.all(layers.map(l => fetchAndRenderLayer(l.layer_id)));
+    }
+
+    // Fetch events
+    const eventsRes = await fetch(`${API}/api/events`);
+    if (eventsRes.ok) {
+      allEvents = await eventsRes.json();
+      renderEvents(allEvents);
+
+      // Render event markers on map (dedicated group)
+      if (!layerGroups['__events__']) {
+        layerGroups['__events__'] = L.layerGroup().addTo(map);
+      }
+      layerGroups['__events__'].clearLayers();
+
+      allEvents.forEach(ev => {
+        if (!ev.latitude || !ev.longitude) return;
+        const icon = categoryIcon[ev.category] || '⚠️';
+        const color = severityColor[ev.severity] || '#5d7a9a';
+        const marker = L.marker([ev.latitude, ev.longitude], {
+          icon: L.divIcon({
+            html: `<div style="font-size:1.6rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.8))">${icon}</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+            className: '',
+          }),
+        });
+        marker.bindPopup(`
+          <div class="popup-title">${icon} ${ev.description}</div>
+          <div class="popup-row">Kategoria: <span>${ev.category}</span></div>
+          <div class="popup-row">Powaga: <span style="color:${color}">${ev.severity}</span></div>
+          <div class="popup-row">Status: <span>${ev.status}</span></div>
+          <div class="popup-row">Czas: <span>${formatTime(ev.time)}</span></div>
+          <div class="popup-row">Źródło: <span>${ev.source}</span></div>
+        `);
+        layerGroups['__events__'].addLayer(marker);
+      });
+    }
+
+    const now = new Date().toLocaleTimeString('pl-PL');
+    document.getElementById('last-updated').textContent = `aktualizacja: ${now}`;
+    document.getElementById('status-dot').style.background = '#27ae60';
+  } catch (e) {
+    console.error('Refresh failed:', e);
+    document.getElementById('status-dot').style.background = '#e74c3c';
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+refresh();
+setInterval(refresh, 30_000);
+</script>
+</body>
+</html>
