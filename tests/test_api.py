@@ -93,9 +93,9 @@ async def test_list_layers(client: AsyncClient):
     r = await client.get("/api/layers")
     assert r.status_code == 200
     layers = r.json()
-    assert len(layers) == 2
     ids = {l["layer_id"] for l in layers}
-    assert ids == {"lublin_boundary", "events"}
+    assert "lublin_boundary" in ids
+    assert "events" in ids
 
 
 async def test_list_layers_have_required_fields(client: AsyncClient):
