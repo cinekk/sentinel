@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 import database
 from database import Base, get_db, HospitalRow
 from plugins import registry, PluginRegistry
-from plugins.mock_boundary import MockBoundaryPlugin, MockEventsPlugin
+from plugins.mock_boundary import MockBoundaryPlugin, EventsPlugin
 from plugins.simulation import SimulationPlugin
 from seed_hospitals import HOSPITALS
 
@@ -49,7 +49,7 @@ async def client(db_session: AsyncSession):
     # Reset and repopulate plugin registry for each test
     registry._plugins.clear()
     registry.register(MockBoundaryPlugin())
-    registry.register(MockEventsPlugin())
+    registry.register(EventsPlugin())
     # Note: SimulationPlugin NOT registered here — keeps existing tests isolated
 
     transport = ASGITransport(app=app)
@@ -71,7 +71,7 @@ async def sim_client(db_session: AsyncSession):
 
     registry._plugins.clear()
     registry.register(MockBoundaryPlugin())
-    registry.register(MockEventsPlugin())
+    registry.register(EventsPlugin())
     registry.register(SimulationPlugin())
 
     transport = ASGITransport(app=app)
