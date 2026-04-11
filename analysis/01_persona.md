@@ -1,206 +1,221 @@
-# Persona: Primary User of SENTINEL
+# Persona: Users of SENTINEL — Inteligentna Mapa Województwa Lubelskiego
 
-## Marek Wiśniewski, Colonel (ret.) — Head of Crisis Management Division
+## Two-Level User Model
+
+SENTINEL serves two distinct users with different needs, rhythms, and decision scopes. The system must satisfy both — but only one is in front of the screen daily.
 
 ---
+
+## A. Executive Sponsor: Marszałek Województwa Lubelskiego
+
+### Identity
+
+| Field | Detail |
+|---|---|
+| Title | Marszałek Województwa Lubelskiego |
+| Role | Elected head of regional self-government (samorząd województwa) |
+| Responsibility | Strategic management of voivodeship: budget, infrastructure, healthcare, culture, transport, EU funds, crisis coordination |
+| Area | 25,155 km², 213 gmin, 20 powiatów, 4 miasta na prawach powiatu, ~2.1 mln mieszkańców |
+| Seat | Urząd Marszałkowski, ul. Artura Grottgera 4, 20-029 Lublin |
+
+### Relationship to the System
+
+The Marszałek does not operate SENTINEL daily. He has better things to do — managing a region, attending sessions of the Sejmik, negotiating EU funding, visiting municipalities.
+
+What the Marszałek needs from SENTINEL:
+
+- **Briefing mode:** Walk into the conference room, glance at the big screen, understand the current state of the voivodeship in 60 seconds. "Is anything on fire — literally or figuratively?"
+- **Crisis escalation:** When a serious event occurs, the Marszałek is briefed by the operator. SENTINEL is the single screen the operator shows him. It must be immediately legible — no explanation needed.
+- **Political accountability:** After an incident, the Marszałek faces the Sejmik, media, and public. SENTINEL's audit log and timeline become his defense: "We knew at 07:41, we acted at 07:45, here is the data that drove the decision."
+- **Showcase value:** The Marszałek wants to demonstrate that Lubelskie is digitally advanced, data-driven, modern. A working decision dashboard is a political asset during visits, inspections, and press events.
+
+**The Marszałek evaluates SENTINEL on one criterion:** *"Does this make me look like I'm in control of my region?"*
+
+---
+
+## B. Primary Operator: Dyrektor Departamentu — Tomasz Kowalczyk
 
 ### 1. Identity
 
 | Field | Detail |
 |---|---|
-| Name | płk. Marek Wiśniewski (ret.) |
-| Age | 54 |
-| Title | Naczelnik Wydziału Zarządzania Kryzysowego, Mazowiecki Urząd Wojewódzki |
-| Role | Head of Crisis Management Division, Masovian Voivodship |
-| Location | Warsaw (Mazowieckie), area of responsibility: 5.2 million inhabitants, 38 counties, 314 municipalities |
-| Background | 28 years in the Polish Armed Forces (engineering and logistics). Transitioned to civilian crisis management after retirement. 6 years in current role. |
-| Education | Military University of Technology (WAT), postgraduate in Civil Security Management (SGSP) |
+| Name | Tomasz Kowalczyk |
+| Age | 46 |
+| Title | Dyrektor Departamentu Bezpieczeństwa i Zarządzania Kryzysowego, Urząd Marszałkowski Województwa Lubelskiego |
+| Role | Head of the Security and Crisis Management Department — the Marszałek's trusted operator for all matters involving regional safety, emergency coordination, and situational awareness |
+| Location | Lublin; area of responsibility covers entire Lubelskie voivodeship |
+| Background | 12 years in Państwowa Straż Pożarna (PSP) including 4 years as zastępca komendanta powiatowego. Transitioned to Urząd Marszałkowski 8 years ago. Rose from specialist to department director. |
+| Education | SGSP (Szkoła Główna Służby Pożarnej) — fire engineering. Postgraduate: Public Administration (UMCS Lublin). ECDL Advanced. |
 
----
+### 2. Two Operating Modes
 
-### 2. Goals and Motivations
+Tomasz lives in two realities. The system must serve both.
 
-Success is a crisis that never became a catastrophe. He measures this by whether his decisions — evacuation orders, resource deployments, public warnings — were issued early enough, to the right people, covering the right geographic scope.
+#### MODE 1: Steady-State — Daily Regional Oversight
 
-He is appointed by the Voivode and legally accountable under the Ustawa o zarządzaniu kryzysowym. He is not a politician; his name goes on the orders.
+**80% of Tomasz's time.** No crisis. The voivodeship runs.
 
-**Core motivations:**
-- Protect life first — specifically the populations that cannot protect themselves: children in schools, residents of care homes (DPS), patients in hospitals.
-- Avoid over-reaction as much as under-reaction. A false alarm that shuts down 40 schools damages credibility with county heads and costs political capital he needs for real emergencies.
-- Maintain command coherence. Multiple agencies operate simultaneously (PSP, police, medical rescue, municipalities). His job is to ensure they are not working from different pictures of reality.
-- Be defensible. Every decision must be documented. If questioned later — by parliament, media, or a court — he must show the information he had, when he had it, and why he decided as he did.
+In this mode, Tomasz uses SENTINEL to:
 
----
+- **Monitor regional vital signs:** hospital bed utilization across the voivodeship, air quality trends, road incident counts, infrastructure status.
+- **Prepare briefings for the Marszałek:** "Panie Marszałku, PM2.5 in Puławy has been elevated for three days — Zakłady Azotowe report planned maintenance, not an incident. Hospital occupancy in Lublin is at 87%, up from 79% last month. Two DPS facilities in powiat łukowski report staffing shortages."
+- **Browse layers:** Flip between healthcare, transport, environment, education — the same map, different data overlays.
+- **Answer ad-hoc questions from the Marszałek:** "How many schools are in powiat puławski?" → click, filter, answer. "What's the closest hospital to Janów Lubelski with an SOR?" → click, measure, answer.
+- **Spot patterns:** "Air quality in Puławy is consistently worse on Tuesdays — is that correlated with a production schedule at Zakłady Azotowe?"
+- **Verify data from BIP:** Municipal BIP pages publish reports as PDFs and HTML tables. Tomasz doesn't trust numbers he can't cross-reference. SENTINEL's scraped data lets him compare what gminas report vs. what sensor data shows.
 
-### 3. Daily Responsibilities
+**Pain points in steady-state:**
+- Data about the voivodeship lives in 30+ separate systems and portals. Each gmina has its own BIP. There is no single view.
+- Preparing a briefing for the Marszałek takes 2-3 hours of manual data gathering.
+- When the Marszałek asks a question in a meeting, Tomasz has to say "I'll check and get back to you" — because the data isn't at his fingertips.
+- Social media sometimes surfaces problems before official channels. A Facebook post about a road collapse in gmina Kazimierz Dolny reached 2,000 shares before the powiat reported it.
 
-**Steady-state:**
-- Maintains the Voivodship Crisis Management Plan (updated annually, legally required).
-- Oversees preparedness exercises with PSP, police, RCB, and county-level crisis teams.
-- Reviews daily IMGW weather alerts and GIOŚ air quality bulletins.
-- Coordinates with infrastructure operators on dependency mapping.
-- Chairs monthly meetings of the Wojewódzki Zespół Zarządzania Kryzysowego.
+#### MODE 2: Crisis — Active Incident Response
 
-**During active crisis (smog/industrial fire):**
-- Convenes the crisis team in the operations room.
-- Receives situation reports from PSP Incident Commander and county coordinators.
-- Issues formal decisions (decyzje) and recommendations (zalecenia) to mayors and county heads.
-- Coordinates resource requests exceeding county capacity.
-- Communicates with RCB if escalation thresholds are met.
-- Approves public warnings via regional alert system (RCB-Alert SMS, sirens).
+**20% of Tomasz's time, but 100% of its intensity.**
 
----
+When an environmental crisis hits — industrial fire, severe smog, chemical spill — Tomasz becomes the operational coordinator. The Marszałek delegates tactical decisions to him and expects to be briefed, not consulted on every call.
 
-### 4. Pain Points with the Current Situation
+In this mode, Tomasz uses SENTINEL to:
 
-**Fragmented data, manual aggregation.** GIOŚ publishes PM2.5/PM10 on one website. IMGW is a separate portal. Hospital bed counts require calling the NFZ Mazovian Branch. Each source needs a different login, a different URL, a different person.
+- **See the threat in space and time:** Where is the contamination now? Where will it be in 30 minutes? In 2 hours?
+- **Identify who is at risk:** Which schools, DPS care homes, hospitals are in the plume path? How many people? How vulnerable?
+- **Assess resources:** How many buses can we mobilize? What hospital capacity is available outside the zone? Where are PSP units?
+- **Make triage decisions:** Shelter-in-place or evacuate? Which facility first? Can we move 142 elderly DPS residents, or do we seal the building?
+- **Issue recommendations to the Marszałek:** "Panie Marszałku, proponuję ogłoszenie alertu RCB dla kodów pocztowych 24-100/110. Szkoły w strefie zagrożenia zamknięte, DPS Puławy w trybie shelter-in-place. Oto dane." The Marszałek signs off; Tomasz executes.
+- **Document everything:** Every sensor reading, every recommendation, every decision — timestamped. This is Tomasz's post-incident audit trail. And the Marszałek's political shield.
 
-**No spatial integration.** He can look at an air quality map and a map of schools — in two separate browser tabs. There is no single view that says: "These 12 schools and 3 care homes are inside the contamination zone defined by current wind and PM10 readings."
+**Pain points in crisis mode:**
+- **Fragmented data, manual aggregation.** GIOŚ publishes PM2.5 on one website. IMGW is a separate portal. Hospital bed counts require calling NFZ. Each source: different login, different URL, different person to call.
+- **No spatial integration.** He can look at an air quality map and a map of schools — in two separate browser tabs. There is no single view that says: "These 4 schools and 1 DPS are inside the contamination zone defined by current wind and PM10 readings."
+- **Latency.** By the time data is collected, manually cross-referenced, and presented, 45–90 minutes have passed. In a fast-moving industrial fire with shifting wind, that lag is the difference between an ordered evacuation and a chaotic one.
+- **No dependency mapping.** He knows the hospitals in the voivodeship. He doesn't have a queryable picture of: which hospital has capacity right now; which road routes pass through the contamination zone; which transport operators have available buses.
+- **Situational awareness is person-dependent.** His best analyst knows how to pull all these sources together — but that knowledge lives in a person's head, not in a system.
+- **No audit trail in the tool.** Decisions are logged in Word documents or printed forms. No software timeline records: at 14:23 PM10 at station X crossed threshold Y; at 14:31 the team was notified; at 14:47 the recommendation was issued.
 
-**Latency.** By the time data is collected, manually cross-referenced, and presented to him, 45–90 minutes have passed. In a fast-moving industrial fire with shifting wind, that lag is the difference between an ordered evacuation and a chaotic one.
+### 3. Key Questions — By Mode
 
-**No dependency mapping.** He knows the hospitals in the voivodship. He does not have a queryable picture of: which hospital has ICU capacity right now; which road routes to that hospital pass through the contamination zone; which transport operators have available buses.
+#### Steady-State Questions (daily/weekly)
 
-**Situational awareness is person-dependent.** His best analyst knows how to pull all these sources together — but that knowledge lives in a person's head, not in a system.
+1. "Jaki jest ogólny stan województwa?" — Any anomalies? Anything the Marszałek should know about?
+2. "Jak wygląda jakość powietrza w regionie?" — Trends, hotspots, comparisons between powiat.
+3. "Ile łóżek szpitalnych jest dostępnych w promieniu 30 km od Puław?" — Resource calculator.
+4. "Co piszą ludzie o sytuacji w regionie?" — Social media signals: complaints, reports, photos of infrastructure damage.
+5. "Pokaż mi powiat opolski" — Zoom, filter, inspect a specific area.
+6. "Jakie dane opublikowała gmina Kazimierz Dolny w ostatnim kwartale?" — BIP scraping verification.
 
-**No audit trail in the tool.** Decisions are logged in separate Word documents or printed forms. No software timeline records: at 14:23 PM10 at station X crossed threshold Y; at 14:31 the team was notified; at 14:47 the school closure recommendation was issued.
+#### Crisis Questions (during active incident)
 
----
+1. "Gdzie dokładnie jest skażenie?" — Current perimeter. What will it look like in 30 minutes given the wind forecast?
+2. "Co jest w strefie zagrożenia?" — How many schools, kindergartens, DPS, hospitals? How many people?
+3. "Jak bardzo jest źle powietrze?" — PM2.5/PM10 readings from nearest stations. Are we above thresholds?
+4. "Jakie mamy zasoby?" — Available beds, buses, ambulances, PSP units.
+5. "Czy możemy ewakuować, czy zamykamy?" — Transport capacity vs. plume timing vs. population.
+6. "Kto został już powiadomiony?" — Have mayors, powiat heads, school directors been notified?
+7. "Jaka jest prognoza na najbliższe 6 godzin?" — Will the zone expand, contract, or shift?
+8. "Czy to eskaluje do poziomu krajowego?" — Does this meet the threshold to notify RCB?
 
-### 5. Key Questions During a Smog / Industrial Fire Event
+### 4. What "Good Dashboard" Means to Tomasz
 
-These are the literal questions he asks out loud, in order of priority:
+#### Steady-state view (default):
 
-1. "Where exactly is the contamination?" — What is the current perimeter? What will it look like in 2 hours given the wind forecast?
-2. "What's inside the zone?" — How many schools, kindergartens, care homes, hospitals? How many people?
-3. "How bad is the air?" — PM2.5/PM10 readings from nearest GIOŚ stations? Are we above WHO thresholds, Polish legal thresholds, or levels that trigger mandatory PSP response?
-4. "What do hospitals have?" — Available beds in the affected and adjacent reception zone? ICU capacity?
-5. "Can we move people?" — What transport assets are available? How long to deploy? Who owns them?
-6. "What are we moving or protecting besides people?" — Cultural assets (museum collections, archives), livestock, hazardous materials that could compound the event.
-7. "Who has already been notified?" — Have mayors and county heads received formal notification? Have schools been contacted?
-8. "What's the weather doing in the next 6 hours?" — Will the zone expand, contract, or shift?
-9. "Is this escalating to national level?" — Does this meet the threshold to notify RCB?
+- Map of Województwo Lubelskie with powiat/gmina boundaries.
+- Color-coded indicators per region: green (normal), yellow (attention), red (action needed).
+- Selectable layers: air quality, healthcare, transport, education, environment.
+- Side panel: summary statistics for selected region.
+- Top bar: last data update timestamp per source. Any source stale >1 hour is flagged.
+- Quick search: type a gmina name → zoom and filter.
 
----
+#### Crisis view (activated on alert or manual switch):
 
-### 6. What "Visibility" Means Concretely
-
-Marek uses "widoczność sytuacji" to mean one specific thing: **a single authoritative picture that everyone in the room is looking at simultaneously, updated automatically, without requiring a person to compile it.**
-
-**Map layer (primary view):**
-- Contamination zone polygon, auto-updated as wind/readings change, with 1-hour and 3-hour forecast overlays.
-- Color-coded sensitive objects within and adjacent to the zone: schools (red), care homes (orange), hospitals (blue), critical infrastructure (yellow).
+- Threat zone polygon on map, auto-updated as wind/readings change, with 1h and 3h forecast overlays.
+- Color-coded sensitive objects within and near the zone: schools (red), DPS (orange), hospitals (blue), critical infrastructure (yellow).
 - Population density heatmap clipped to the zone.
 - Available transport assets as icons with capacity labels.
-- Road network with route viability indicators.
+- Road network with route viability.
+- AI-generated action list with data sources cited.
+- Timeline / audit log — every data point, recommendation, and decision timestamped.
 
-**Panel: Air quality — live readings**
-- PM2.5 and PM10 from GIOŚ stations, with threshold indicators (green/amber/red) and trend arrows.
-- Airly sensor readings to fill gaps between GIOŚ stations.
-- IMGW wind speed, direction, precipitation — current and +3h.
+#### What Tomasz does NOT want:
 
-**Panel: Sensitive objects summary (tabular)**
-- Schools: address, pupil count, head teacher contact.
-- Care homes: resident count, mobility status.
-- Hospitals: available bed count (NFZ data), distance from zone center.
-
-**Panel: Resources**
-- Ambulances and current location.
-- PSP HAZMAT units — status (free / committed / en route).
-- Transport companies in the voivodship logistics registry: vehicle count, capacity, contact.
-
-**Panel: Timeline / audit log**
-- Chronological log: sensor reading → notification → decision → acknowledgment. Timestamps on everything.
-- Doubles as post-incident documentation.
-
-**What he does NOT want:**
 - Raw data tables without spatial context.
-- Dashboards requiring multiple tabs.
-- Any widget requiring him to understand how it works before trusting it.
-- Alerts without a clear recommended action.
+- Dashboards requiring multiple tabs or windows.
+- Any widget requiring explanation before use.
+- AI recommendations without visible data sources.
+- English-language labels — he works under stress in Polish.
+- Systems that fail silently — he must know immediately when a data feed goes down.
 
----
+### 5. Technology Comfort and Constraints
 
-### 7. Decision-Making Patterns
-
-**T+0:** GIOŚ or PSP notification arrives. Duty officer activated. No public action yet.
-
-**T+15–30 min:** First internal assessment. Team maps the zone and identifies sensitive objects. This is where the current 45-minute manual lag creates maximum pain.
-
-**T+30–60 min:** Tiered recommendation:
-- Level 1 (advisory): Notify mayors and county heads. No mandatory action.
-- Level 2 (precautionary): Recommend school closures, restrict outdoor activities for DPS residents.
-- Level 3 (directive): Order evacuation of specific facilities. Requires signed decyzja.
-
-**Who he calls, in order:**
-1. PSP Komenda Wojewódzka duty officer — situation at the source.
-2. County heads (starostowie) in the affected area.
-3. NFZ Mazovian Branch — hospital capacity check.
-4. RCB — if escalation threshold is reached.
-5. Voivode — briefing, not asking permission.
-6. Regional media coordinator — if level 2 or above.
-
-**Decision style:** Not a consensus-seeker in a crisis. Collects information fast, decides on available data, issues clear directives. Expects acknowledgment. Will change a decision if new data arrives, but will not wait for consensus before issuing the first one.
-
-**National escalation triggers:** Event affecting more than one voivodship; PM10 sustained above 500 µg/m³ at multiple stations; confirmed fatalities; mass evacuation (>500 persons).
-
----
-
-### 8. Technology Comfort Level and Constraints
-
-**Comfort: Moderate-high within specific domains.** Competent with GIS-adjacent tools (ARCGIS-based voivodship planning systems). Fluent with Teams, Outlook, Word, Excel. Has used SZAFIR but found it poorly adapted to real-time decision-making. Not a developer.
+**Comfort:** Moderate-high within specific domains. Competent with GIS-adjacent tools (used ARCGIS in PSP, familiar with geoportal.gov.pl). Fluent with MS Office, Teams, basic data analysis in Excel. Not a developer. Can read a chart and a map; will not read documentation.
 
 **Hard constraints:**
-- Must work on the government network in the operations room (security-restricted). Cloud tools need IT approval or local/intranet deployment.
-- Must be readable on a 55" display shared by multiple people in the room.
-- Must be readable by a 54-year-old under stress. He wears reading glasses. Tiny dense tables are a problem.
-- Polish-language labels — he will not decode English terminology under pressure.
-- No login friction during a crisis — accessible within 10 seconds.
+- Must work on the Urząd Marszałkowski network. Cloud tools need IT approval or local deployment.
+- Must be readable on a 55" display in the conference room (briefing the Marszałek) AND on a tablet (walking between offices).
+- Must be readable by a 46-year-old under stress. High-contrast, large labels, no tiny dense tables.
+- **Polish-language labels** — nie będzie dekodował angielskiej terminologii pod presją.
+- No login friction — accessible within 10 seconds. During a crisis, every second counts.
 
 **What he distrusts:**
-- AI recommendations without a visible data source.
-- Systems that fail silently — he must know immediately when a feed goes down.
-- Dashboards that look impressive but cannot answer his specific questions.
+- AI recommendations without a visible data source — "skąd to wiesz?"
+- Systems that look impressive in demo but cannot answer his specific question.
+- Dashboards that work with demo data but break on real feeds.
+- Any system that requires a developer to maintain after the hackathon team leaves.
 
----
+### 6. Decision-Making Patterns
 
-### 9. Perfect Tool vs. Today's Reality
+**In steady-state:** Tomasz is methodical. He prepares, cross-references, verifies before briefing the Marszałek. He won't present data he can't defend. Time scale: hours to days.
 
-**What a perfect tool gives him:**
+**In crisis:** Tomasz is decisive. Collects information fast, decides on available data, issues clear recommendations. Expects acknowledgment. Will update a recommendation if new data arrives, but will not wait for perfect information before issuing the first one. Time scale: minutes.
 
-- One screen. One picture. Updated automatically. No compilation required.
-- Contamination zone on a map with wind forecast baked in.
-- Every school, care home, and hospital in the zone listed — with phone numbers, capacity, and status.
-- Resource panel showing available transport and its distance from the zone.
-- Timeline that is simultaneously his situational record and post-incident audit log.
-- Recommendations that cite their sources: "Recommend school closure based on PM10 = 380 µg/m³ at station Warszawa-Ursynów (15 min ago), zone overlap with 14 schools, wind direction NE at 18 km/h."
-- Dependency view: "Hospital X is in the zone; evacuation route via DK7 is also in the zone; alternative route via S8 is clear."
+**Escalation chain:**
+1. Tomasz assesses the situation using SENTINEL.
+2. Issues immediate protective recommendations (shelter-in-place, closures) within his authority.
+3. Briefs Marszałek with SENTINEL dashboard — "this is the situation, this is what I recommend."
+4. Marszałek approves escalation (RCB alert, formal orders).
+5. Tomasz coordinates execution.
 
-**What frustrates him today:**
+### 7. Context for Bonus Features
 
-- Being handed a printout during a crisis — any printout is already 20 minutes old.
-- Calling the NFZ to ask about bed counts while managing an active event.
-- Analysts spending the first hour of a crisis building a spreadsheet instead of advising him.
-- Weather data without spatial context — a wind speed number means nothing without knowing where it pushes the contamination.
-- After the crisis: spending days reconstructing the timeline from emails and hand-written notes for the after-action report.
+These aren't abstract feature requests. They come from Tomasz's real pain points:
 
-**The one sentence that describes what he wants:**
-
-> "I need to walk into the room, look at one screen, and in 90 seconds know: what is happening, where, how bad, and what I can do about it."
-
----
-
-### Design Implications for SENTINEL
-
-| Marek's Need | SENTINEL Feature Requirement |
+| Bonus Feature | Tomasz's Need |
 |---|---|
-| Zone visualization with forecast | Contamination polygon layer with IMGW wind integration and time-step projection |
-| Sensitive objects in zone | Spatial join of GIOŚ readings with POI database (schools, DPS, hospitals) |
-| Hospital capacity | Live or near-live NFZ bed data feed, fallback to last-known |
-| Transport resources | Logistics registry integration with operator contact and vehicle capacity |
-| Threshold-based alerts | PM2.5/PM10 thresholds triggering automatic zone assessment and notification drafts |
-| Audit trail | Append-only event log with actor, timestamp, data snapshot |
-| Source transparency | Every AI recommendation exposes the data inputs that produced it |
-| Offline / intranet mode | API-first architecture with local deployment option |
-| Large screen readability | High-contrast tactical UI, minimum 16px labels, color-coded severity |
-| Polish UX | All labels and recommendations in Polish |
+| **Scraping public data sources** | "Gminy w Lubelskim publikują dane o infrastrukturze, budżetach, zagrożeniach na swoich BIP-ach — jako PDF-y, tabelki HTML, pliki XLSX. Nie mam czasu tego ręcznie zbierać z 213 stron." |
+| **Social media agents** | "W 2024 informacja o awarii wodociągów w Świdniku pojawiła się na Facebooku 20 minut przed oficjalnym zgłoszeniem. Ludzie wrzucają zdjęcia, filmiki — to jest najszybszy sensor jaki mam, ale nie mam jak tego monitorować." |
+| **Resource calculators** | "Marszałek pyta: ile łóżek szpitalnych jest w promieniu 30 km od Puław? Ile autobusów MPK Lublin może oddelegować? Pojemność magazynów przeciwpowodziowych nad Wisłą? Muszę to policzyć ręcznie za każdym razem." |
+| **Voice assistant** | "Na sali konferencyjnej stoję przy dużym ekranie, w jednej ręce telefon, w drugiej dokumenty. Chcę powiedzieć: 'Pokaż powiat puławski', 'Jaki jest PM2.5 w Puławach?', 'Włącz warstwę szpitali' — bez szukania myszy." |
+
+### 8. What Tomasz Wants to See in the Demo
+
+This is what he — and by proxy, the jury member from the Urząd Marszałkowski — expects when he sits down to the 5-minute presentation:
+
+1. **"Pokaż mi mapę mojego województwa."** — Lubelskie, z powiatami i gminami. Nie genericza mapa Polski.
+2. **"Kliknę powiat puławski — co tu jest?"** — Zoom, filtr, dane o powiecie.
+3. **"Włącz warstwę jakości powietrza."** — GIOŚ stations, Airly sensors, current readings, color-coded.
+4. **"A teraz pokaż mi co się dzieje, gdy zaczyna się pożar w Zakładach Azotowych."** — Transition to crisis mode. Plume appears. Schools, DPS, hospital highlighted. AI recommendation generated.
+5. **"Skąd bierzesz te dane?"** — Source transparency. Every number has a provenance.
+6. **"Czy mogę to obsługiwać głosem?"** — Voice command demo.
+7. **"A co z danymi, które nie mają API?"** — Show scraping module pulling from a gmina BIP page.
+
+---
+
+## Design Implications for SENTINEL
+
+| User Need | SENTINEL Feature |
+|---|---|
+| Marszałek: 60-second briefing | Clean default view with regional health indicators, no interaction needed to understand state |
+| Tomasz steady-state: layer browsing | Multi-layer toggle with persistent map, selectable data overlays |
+| Tomasz steady-state: ad-hoc queries | Click-to-filter on powiat/gmina, resource calculators, search |
+| Tomasz steady-state: data verification | Scraped BIP data with source links and timestamps |
+| Tomasz steady-state: signal monitoring | Social media feed with geolocation pins on map |
+| Tomasz crisis: threat visualization | Plume polygon with wind-driven forecast, auto-updated |
+| Tomasz crisis: who is at risk | Spatial join of threat zone with school/DPS/hospital registry |
+| Tomasz crisis: resource assessment | Transport capacity, hospital beds, PSP units — live or near-live |
+| Tomasz crisis: action recommendations | AI-generated prioritized action list with cited data sources |
+| Tomasz crisis: audit trail | Append-only event log: sensor → recommendation → decision → acknowledgment |
+| Both: source transparency | Every AI output exposes the data inputs that produced it |
+| Both: large screen readability | High-contrast, min 16px labels, color-coded severity, responsive layout |
+| Both: Polish UX | All labels, recommendations, and voice commands in Polish |
+| Both: voice control | Polish-language voice commands for map navigation, layer toggle, data readout |
+| Both: offline resilience | Visible staleness indicators per data source; no silent failures |
