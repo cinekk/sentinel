@@ -136,6 +136,19 @@ function popupHtml(props, allowedKeys, labelMap) {
   return `<div class="popup-title">${props.name || props.description || 'Obiekt'}</div>${rows}`;
 }
 
+// ── Cluster icon factory ──────────────────────────────────────────────────────
+
+function clusterIconFactory(cluster) {
+  const count = cluster.getChildCount();
+  const size  = count < 10 ? 32 : count < 100 ? 38 : 44;
+  return L.divIcon({
+    html: `<div class="cluster-icon" style="width:${size}px;height:${size}px">${count}</div>`,
+    className: '',
+    iconSize: L.point(size, size),
+    iconAnchor: L.point(size / 2, size / 2),
+  });
+}
+
 // ── Layer rendering ───────────────────────────────────────────────────────────
 
 function styleForFeature(feature) {
@@ -229,26 +242,66 @@ async function fetchAndRenderLayer(id) {
     layerNumericProps[id] = [...numericProps];
     layerAllProps[id]     = [...allPropsSet];
 
+    const features      = geojson.features ?? [];
+    const pointFeatures = features.filter(f => f.geometry?.type === 'Point');
+    const otherFeatures = features.filter(f => f.geometry?.type !== 'Point');
+    const shouldCluster = pointFeatures.length > 0;
+
     if (layerGroups[id]) {
       layerGroups[id].clearLayers();
     } else {
-      layerGroups[id] = L.layerGroup();
+      layerGroups[id] = shouldCluster
+        ? L.markerClusterGroup({
+            chunkedLoading: true,
+            maxClusterRadius: 60,
+            showCoverageOnHover: false,
+            iconCreateFunction: clusterIconFactory,
+          })
+        : L.layerGroup();
     }
 
-    const geoLayer = L.geoJSON(geojson, {
-      style: styleForFeature,
-      pointToLayer: (feature, latlng) => pointToLayer(feature, latlng, id),
-      onEachFeature(feature, layer) {
+    if (shouldCluster) {
+      // Add each point marker directly so the cluster engine can group them
+      for (const feature of pointFeatures) {
+        const [lon, lat] = feature.geometry.coordinates;
+        const marker = pointToLayer(feature, L.latLng(lat, lon), id);
+        if (!marker) continue;
         const cfg     = layerConfig[id] || {};
         const allowed = cfg.popupProps?.length ? cfg.popupProps : null;
-        layer.bindPopup(popupHtml(feature.properties, allowed, layerLabelMaps[id]), { maxWidth: 300 });
+        marker.bindPopup(popupHtml(feature.properties, allowed, layerLabelMaps[id]), { maxWidth: 300 });
         if (feature.properties?.type === 'powiat') {
-          layer.on('click', () => filterEventsByPowiat(feature.properties.name));
+          marker.on('click', () => filterEventsByPowiat(feature.properties.name));
         }
-      },
-    });
+        layerGroups[id].addLayer(marker);
+      }
+      // Polygons/lines from the same layer go into a plain geoJSON sub-layer
+      if (otherFeatures.length > 0) {
+        const geoLayer = L.geoJSON({ ...geojson, features: otherFeatures }, {
+          style: styleForFeature,
+          onEachFeature(feature, layer) {
+            const cfg     = layerConfig[id] || {};
+            const allowed = cfg.popupProps?.length ? cfg.popupProps : null;
+            layer.bindPopup(popupHtml(feature.properties, allowed, layerLabelMaps[id]), { maxWidth: 300 });
+          },
+        });
+        layerGroups[id].addLayer(geoLayer);
+      }
+    } else {
+      const geoLayer = L.geoJSON(geojson, {
+        style: styleForFeature,
+        pointToLayer: (feature, latlng) => pointToLayer(feature, latlng, id),
+        onEachFeature(feature, layer) {
+          const cfg     = layerConfig[id] || {};
+          const allowed = cfg.popupProps?.length ? cfg.popupProps : null;
+          layer.bindPopup(popupHtml(feature.properties, allowed, layerLabelMaps[id]), { maxWidth: 300 });
+          if (feature.properties?.type === 'powiat') {
+            layer.on('click', () => filterEventsByPowiat(feature.properties.name));
+          }
+        },
+      });
+      layerGroups[id].addLayer(geoLayer);
+    }
 
-    layerGroups[id].addLayer(geoLayer);
     if (layerEnabled[id] && !map.hasLayer(layerGroups[id])) {
       layerGroups[id].addTo(map);
     }
@@ -461,7 +514,12 @@ function filterEventsByPowiat(name) {
 
 function renderEventMarkers(events) {
   if (!layerGroups['__events__']) {
-    layerGroups['__events__'] = L.layerGroup().addTo(map);
+    layerGroups['__events__'] = L.markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 50,
+      showCoverageOnHover: false,
+      iconCreateFunction: clusterIconFactory,
+    }).addTo(map);
   }
   layerGroups['__events__'].clearLayers();
 

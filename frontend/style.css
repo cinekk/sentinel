@@ -878,6 +878,28 @@ header .subtitle {
 
 .popup-row span { color: var(--text-hi); font-weight: 500; }
 
+/* ── Cluster icons ───────────────────────────────────────────────────────────── */
+
+.cluster-icon {
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid #3b82f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #93c5fd;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4), inset 0 0 6px rgba(59, 130, 246, 0.08);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+.cluster-icon:hover {
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.65), inset 0 0 8px rgba(59, 130, 246, 0.15);
+}
+
 /* ── Resource type icons on map ──────────────────────────────────────────────── */
 
 .map-marker-wrap {
