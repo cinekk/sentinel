@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 EventCategory = Literal["fire", "flood", "medical", "hazmat", "security", "infrastructure", "other"]
 EventSeverity = Literal["low", "medium", "high", "critical"]
 EventStatus = Literal["active", "resolved", "investigating"]
-EventSource = Literal["human", "sensor", "radio", "api"]
+EventSource = Literal["human", "sensor", "radio", "api", "simulation"]
 
 
 class EventOut(BaseModel):

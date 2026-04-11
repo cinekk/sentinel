@@ -180,6 +180,23 @@ function pointToLayer(feature, latlng, layerId) {
 
   const color = SEVERITY_COLOR[severity] || '#6e92b4';
   const icon  = CATEGORY_ICON[category] || '⚠️';
+
+  // 112 call: investigating = dark red pulsing border; active = severity color ring
+  if (type === 'event') {
+    const props = feature.properties ?? {};
+    const isNoResponse = props.status === 'investigating';
+    const ringColor = isNoResponse ? '#7f1d1d' : (SEVERITY_COLOR[severity] || '#6e92b4');
+    const pulse = isNoResponse || severity === 'critical';
+    const markerClass = `map-marker-wrap${pulse ? ' marker-pulse' : ''}`;
+    const border = `2px solid ${ringColor}`;
+    return L.marker(latlng, {
+      icon: L.divIcon({
+        html: `<div class="${markerClass}" style="background:${ringColor}22;border:${border};border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:1rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.9))">${icon}</div>`,
+        iconSize: [24, 24], iconAnchor: [12, 12], className: '',
+      }),
+    });
+  }
+
   return L.marker(latlng, {
     icon: L.divIcon({
       html: `<div class="map-marker-wrap" style="font-size:1.4rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.9))">${icon}</div>`,
@@ -1011,6 +1028,62 @@ function initBriefing() {
   if (closeBtn) closeBtn.addEventListener('click', hideBriefingWidget);
 }
 
+// ── 112 Emergency call generator panel ───────────────────────────────────────
+
+let _e112Running = false;
+
+document.getElementById('btn-e112-start').addEventListener('click', async () => {
+  await fetch(`${API}/api/emergency/start`, { method: 'POST' });
+  await update112State();
+  await refresh();
+});
+
+document.getElementById('btn-e112-pause').addEventListener('click', async () => {
+  const action = _e112Running ? 'pause' : 'resume';
+  await fetch(`${API}/api/emergency/${action}`, { method: 'POST' });
+  await update112State();
+});
+
+document.getElementById('btn-e112-reset').addEventListener('click', async () => {
+  await fetch(`${API}/api/emergency/reset`, { method: 'POST' });
+  await update112State();
+  await refresh();
+});
+
+async function update112State() {
+  try {
+    const res = await fetch(`${API}/api/layers/events/geojson`);
+    if (!res.ok) return;
+    const geojson = await res.json();
+    const simCalls = (geojson.features ?? []).filter(f => f.properties?.source === 'simulation');
+    const count = simCalls.length;
+    const noResponse = simCalls.filter(f => f.properties?.status === 'investigating').length;
+
+    document.getElementById('e112-count').textContent = count;
+
+    const dot   = document.getElementById('e112-dot');
+    const label = document.getElementById('e112-label');
+
+    if (_e112Running) {
+      dot.className     = 'running';
+      label.textContent = noResponse > 0 ? `AKTYWNA · ${noResponse} bez ZRM` : 'AKTYWNA';
+      label.className   = 'running';
+      document.getElementById('btn-e112-pause').textContent = '⏸ PAUZA';
+    } else {
+      dot.className     = '';
+      label.textContent = count > 0 ? 'ZATRZYMANA' : 'GOTOWA';
+      label.className   = '';
+      document.getElementById('btn-e112-pause').textContent = '▶ WZNÓW';
+    }
+  } catch (e) {
+    console.warn('112 state fetch failed:', e);
+  }
+}
+
+document.getElementById('btn-e112-start').addEventListener('click', () => { _e112Running = true; }, true);
+document.getElementById('btn-e112-reset').addEventListener('click', () => { _e112Running = false; }, true);
+document.getElementById('btn-e112-pause').addEventListener('click', () => { _e112Running = !_e112Running; }, true);
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 fetchLayerSchemas();
@@ -1018,7 +1091,9 @@ initChat();
 initBriefing();
 refresh();
 updateSimState();
+update112State();
 pollAlerts();
 setInterval(refresh, 30_000);
 setInterval(updateSimState, 10_000);
+setInterval(update112State, 15_000);
 setInterval(pollAlerts, 5_000);

@@ -54,12 +54,41 @@ class MockBoundaryPlugin(BasePlugin):
         return fc
 
 
-class MockEventsPlugin(BasePlugin):
+def _event_to_feature(row: object) -> dict:
+    return {
+        "type": "Feature",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [row.longitude, row.latitude],  # type: ignore[attr-defined]
+        },
+        "properties": {
+            "type": "event",
+            "id": row.id,  # type: ignore[attr-defined]
+            "time": row.time.isoformat(),  # type: ignore[attr-defined]
+            "category": row.category,  # type: ignore[attr-defined]
+            "severity": row.severity,  # type: ignore[attr-defined]
+            "status": row.status,  # type: ignore[attr-defined]
+            "description": row.description,  # type: ignore[attr-defined]
+            "source": row.source,  # type: ignore[attr-defined]
+            "model": row.model,  # type: ignore[attr-defined]
+        },
+    }
+
+
+class EventsPlugin(BasePlugin):
     layer_id = "events"
     layer_name = "Crisis Events"
     data_type = "events"
 
     async def fetch(self) -> dict:
+        from sqlalchemy import select
+        from database import EventRow, SessionLocal
+
         self._last_updated = datetime.now(timezone.utc)
-        # Phase 2: empty layer — events come from DB in Phase 3+
-        return {"type": "FeatureCollection", "features": []}
+        async with SessionLocal() as session:
+            result = await session.execute(select(EventRow).order_by(EventRow.time.desc()))
+            rows = result.scalars().all()
+        return {
+            "type": "FeatureCollection",
+            "features": [_event_to_feature(r) for r in rows],
+        }

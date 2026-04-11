@@ -2,7 +2,7 @@
 import pytest
 
 from plugins import PluginRegistry
-from plugins.mock_boundary import MockBoundaryPlugin, MockEventsPlugin, POWIATY
+from plugins.mock_boundary import MockBoundaryPlugin, EventsPlugin, POWIATY
 
 
 # ── Registry ──────────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ def test_registry_get_unknown_returns_none():
 def test_registry_all():
     reg = PluginRegistry()
     reg.register(MockBoundaryPlugin())
-    reg.register(MockEventsPlugin())
+    reg.register(EventsPlugin())
     assert len(reg.all()) == 2
 
 
@@ -70,16 +70,9 @@ async def test_boundary_plugin_polygon_is_closed():
     assert coords[0] == coords[-1]
 
 
-# ── MockEventsPlugin ──────────────────────────────────────────────────────────
-
-async def test_events_plugin_fetch_returns_empty_collection():
-    plugin = MockEventsPlugin()
-    result = await plugin.fetch()
-    assert result["type"] == "FeatureCollection"
-    assert result["features"] == []
-
+# ── EventsPlugin ──────────────────────────────────────────────────────────────
 
 async def test_events_plugin_metadata():
-    plugin = MockEventsPlugin()
+    plugin = EventsPlugin()
     assert plugin.layer_id == "events"
     assert plugin.data_type == "events"
