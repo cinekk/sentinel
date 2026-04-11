@@ -76,6 +76,7 @@ const LAYER_TYPE_CLASS = {
   boundary:    'boundary',
   simulation:  'simulation',
   air_quality: 'air_quality',
+  flood_zone:  'flood_zone',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -135,6 +136,7 @@ function styleForFeature(feature) {
   const { type, severity } = feature.properties ?? {};
   if (type === 'voivodeship') return { color: '#1e3d5e', weight: 1.5, fillColor: '#0b1426', fillOpacity: 0.35 };
   if (type === 'threat_zone') return { color: '#ef4444', weight: 2, fillColor: '#ef4444', fillOpacity: 0.12, dashArray: '6 4' };
+  if (type === 'flood_zone')  return { color: '#0ea5e9', weight: 1, fillColor: '#38bdf8', fillOpacity: 0.30 };
   const color = SEVERITY_COLOR[severity] || '#3b82f6';
   return { color, weight: 1.5, fillColor: color, fillOpacity: 0.18 };
 }
@@ -184,7 +186,9 @@ async function fetchAndRenderLayer(id) {
   try {
     const res = await fetch(`${API}/api/layers/${id}/geojson`);
     if (!res.ok) return;
-    const geojson = await res.json();
+    const data = await res.json();
+
+    const geojson = data;
 
     // Discover property names and types from GeoJSON features
     const numericProps = new Set();
@@ -263,7 +267,11 @@ function renderLayerPanel(layers) {
       layerEnabled[layer.layer_id] = e.target.checked;
       const group = layerGroups[layer.layer_id];
       if (!group) return;
-      e.target.checked ? group.addTo(map) : map.removeLayer(group);
+      if (e.target.checked) {
+        group.addTo(map);
+      } else {
+        map.removeLayer(group);
+      }
     });
 
     if (layer.data_type === 'resources') {

@@ -269,6 +269,7 @@ header .subtitle {
 .layer-dot.boundary   { background: var(--text-dim); }
 .layer-dot.simulation { background: var(--amber); }
 .layer-dot.air_quality { background: var(--green); }
+.layer-dot.flood_zone { background: #38bdf8; }
 
 /* ── Simulation controls ─────────────────────────────────────────────────────── */
 
