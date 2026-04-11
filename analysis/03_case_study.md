@@ -10,7 +10,7 @@
 
 On 11 April 2026, a fire broke out in a warehouse storing industrial solvents and agricultural chemicals at the logistics terminal adjacent to Zakłady Azotowe Puławy S.A. Within 90 minutes, PM2.5 at the nearest GIOŚ station (Puławy-Centrum) exceeded 340 µg/m³ — 23x the WHO 24h guideline. A north-northwest wind at 18 km/h drove the plume directly toward a corridor containing three primary schools, a DPS care home, and the District Hospital in Puławy — all within 6 km of the fire origin.
 
-SENTINEL integrated real-time GIOŚ, Airly, and IMGW data with a facility registry to generate a quantified plume projection and ranked action list within 4 minutes of alert. Crisis managers acting without SENTINEL spent 47 minutes in phone-based coordination before arriving at incomplete situational awareness.
+SENTINEL integrated real-time GIOŚ, Airly, and IMGW data with a facility registry to generate a quantified plume projection and ranked action list within 4 minutes of alert. The operator (Dyrektor Departamentu Bezpieczeństwa UMWL) had the full picture on one screen — and could brief the Marszałek immediately. Without SENTINEL, the same team spent 47 minutes in phone-based coordination before arriving at incomplete situational awareness.
 
 ---
 
@@ -96,7 +96,7 @@ SENTINEL output: DPS Puławy will reach PM2.5 >200 µg/m³ in est. 22 min; SP nr
 
 **With SENTINEL:**
 
-One screen replaced 14 separate phone calls, three browser windows, and a paper map. Left panel: live plume cone on Usemaps map, updated every 5 minutes. Center: three PM2.5 time series with WHO/Polish threshold lines and 1-hour projections. Right: Claude-generated action list with object name, address, headcount, estimated time window, required resource. Bottom: bus count, ambulance positions, hospital bed capacity. Automatic alert on NWP forecast change.
+One screen replaced 14 separate phone calls, three browser windows, and a paper map. Tomasz Kowalczyk saw: left panel — live plume cone on the Lubelskie map, updated every 5 minutes. Center — three PM2.5 time series with WHO/Polish threshold lines and 1-hour projections. Right — Claude-generated action list with object name, address, headcount, estimated time window, required resource. Bottom — bus count (MPK Lublin + PKS), ambulance positions, hospital bed capacity (SPZOZ Puławy, COZL Lublin). Automatic alert on NWP forecast change. The Marszałek, notified at T+22, saw the same dashboard on the conference room 55" screen during his 08:15 briefing — no separate preparation needed.
 
 ---
 
