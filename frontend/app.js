@@ -24,6 +24,24 @@ const layerEnabled = {};   // layer_id → bool
 const layerMeta    = {};   // layer_id → meta object
 let allEvents = [];
 
+const layerConfig       = {};  // layer_id → {mainProp, thresholds, popupProps}
+const layerNumericProps = {};  // layer_id → string[]  (numeric property names)
+const layerAllProps     = {};  // layer_id → string[]  (all property names)
+
+// ── Layer config persistence ──────────────────────────────────────────────────
+
+function loadLayerConfig(id) {
+  try {
+    const raw = localStorage.getItem(`sentinel_layer_config_${id}`);
+    return raw ? JSON.parse(raw) : { mainProp: null, thresholds: [], popupProps: null };
+  } catch { return { mainProp: null, thresholds: [], popupProps: null }; }
+}
+
+function saveLayerConfig(id, cfg) {
+  layerConfig[id] = cfg;
+  localStorage.setItem(`sentinel_layer_config_${id}`, JSON.stringify(cfg));
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const SEVERITY_COLOR = {
@@ -74,11 +92,38 @@ function bearingLabel(deg) {
   return `${deg}° (${BEARING_LABELS[nearest] || '—'})`;
 }
 
-function popupHtml(props) {
+function getColorForValue(value, thresholds) {
+  if (!thresholds?.length || value == null || isNaN(Number(value))) return null;
+  const num = Number(value);
+  for (const t of thresholds) {
+    if (t.value == null) return t.color;  // catch-all
+    if (num < t.value)   return t.color;
+  }
+  return thresholds[thresholds.length - 1].color;
+}
+
+function isLowestBucket(value, thresholds) {
+  if (!thresholds?.length || value == null || isNaN(Number(value))) return false;
+  const first = thresholds.find(t => t.value != null);
+  return first != null && Number(value) < first.value;
+}
+
+function defaultThresholds() {
+  return [
+    { value: 10,  color: '#ef4444' },
+    { value: 50,  color: '#f97316' },
+    { color: '#10b981' },
+  ];
+}
+
+function popupHtml(props, allowedKeys) {
   if (!props) return '<div class="popup-title">Brak danych</div>';
   const skip = new Set(['id', 'type']);
   const rows = Object.entries(props)
-    .filter(([k]) => !skip.has(k) && props[k] != null && props[k] !== '')
+    .filter(([k]) => {
+      if (skip.has(k) || props[k] == null || props[k] === '') return false;
+      return !allowedKeys?.length || allowedKeys.includes(k);
+    })
     .map(([k, v]) => `<div class="popup-row">${k}<span>${v}</span></div>`)
     .join('');
   return `<div class="popup-title">${props.name || props.description || 'Obiekt'}</div>${rows}`;
@@ -94,7 +139,7 @@ function styleForFeature(feature) {
   return { color, weight: 1.5, fillColor: color, fillOpacity: 0.18 };
 }
 
-function pointToLayer(feature, latlng) {
+function pointToLayer(feature, latlng, layerId) {
   const { type, severity, category } = feature.properties ?? {};
 
   if (type === 'powiat') {
@@ -109,10 +154,18 @@ function pointToLayer(feature, latlng) {
 
   const resourceIcon = RESOURCE_ICON[type];
   if (resourceIcon) {
+    const cfg = layerId ? (layerConfig[layerId] || {}) : {};
+    const propVal = cfg.mainProp != null ? feature.properties?.[cfg.mainProp] : null;
+    const bgColor = getColorForValue(propVal, cfg.thresholds);
+    const pulse   = bgColor && isLowestBucket(propVal, cfg.thresholds);
+    const circleStyle = bgColor
+      ? `background:${bgColor};border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;${pulse ? '' : `box-shadow:0 0 6px ${bgColor}88;`}`
+      : '';
+    const markerClass = `map-marker-wrap${pulse ? ' marker-pulse' : ''}`;
     return L.marker(latlng, {
       icon: L.divIcon({
-        html: `<div class="map-marker-wrap" style="font-size:1rem;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">${resourceIcon}</div>`,
-        iconSize: [20, 20], iconAnchor: [10, 10], className: '',
+        html: `<div class="${markerClass}" style="${circleStyle}font-size:1rem;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">${resourceIcon}</div>`,
+        iconSize: [22, 22], iconAnchor: [11, 11], className: '',
       }),
     });
   }
@@ -133,6 +186,22 @@ async function fetchAndRenderLayer(id) {
     if (!res.ok) return;
     const geojson = await res.json();
 
+    // Discover property names and types from GeoJSON features
+    const numericProps = new Set();
+    const allPropsSet  = new Set();
+    for (const feat of geojson.features ?? []) {
+      const props = feat.properties;
+      if (!props) continue;
+      for (const [k, v] of Object.entries(props)) {
+        allPropsSet.add(k);
+        if (k !== 'id' && (typeof v === 'number' || (typeof v === 'string' && v !== '' && !isNaN(Number(v))))) {
+          numericProps.add(k);
+        }
+      }
+    }
+    layerNumericProps[id] = [...numericProps];
+    layerAllProps[id]     = [...allPropsSet];
+
     if (layerGroups[id]) {
       layerGroups[id].clearLayers();
     } else {
@@ -141,9 +210,11 @@ async function fetchAndRenderLayer(id) {
 
     const geoLayer = L.geoJSON(geojson, {
       style: styleForFeature,
-      pointToLayer,
+      pointToLayer: (feature, latlng) => pointToLayer(feature, latlng, id),
       onEachFeature(feature, layer) {
-        layer.bindPopup(popupHtml(feature.properties), { maxWidth: 300 });
+        const cfg     = layerConfig[id] || {};
+        const allowed = cfg.popupProps?.length ? cfg.popupProps : null;
+        layer.bindPopup(popupHtml(feature.properties, allowed), { maxWidth: 300 });
         if (feature.properties?.type === 'powiat') {
           layer.on('click', () => filterEventsByPowiat(feature.properties.name));
         }
@@ -172,13 +243,18 @@ function renderLayerPanel(layers) {
   }
 
   list.innerHTML = layers.map(layer => {
-    const dotClass = LAYER_TYPE_CLASS[layer.data_type] || 'boundary';
+    const dotClass  = LAYER_TYPE_CLASS[layer.data_type] || 'boundary';
+    const hasConfig = layer.data_type === 'resources';
     return `
-      <label class="layer-item">
-        <input type="checkbox" id="toggle-${layer.layer_id}" ${layerEnabled[layer.layer_id] ? 'checked' : ''} />
-        <span class="layer-dot ${dotClass}"></span>
-        <span class="layer-name">${layer.name}</span>
-      </label>
+      <div class="layer-entry" data-layer-id="${layer.layer_id}">
+        <label class="layer-item">
+          <input type="checkbox" id="toggle-${layer.layer_id}" ${layerEnabled[layer.layer_id] ? 'checked' : ''} />
+          <span class="layer-dot ${dotClass}"></span>
+          <span class="layer-name">${layer.name}</span>
+          ${hasConfig ? `<button class="layer-cfg-btn" data-layer-id="${layer.layer_id}" title="Konfiguracja warstwy">⚙</button>` : ''}
+        </label>
+        ${hasConfig ? `<div class="layer-cfg-panel" id="cfg-panel-${layer.layer_id}" style="display:none"></div>` : ''}
+      </div>
     `;
   }).join('');
 
@@ -189,7 +265,121 @@ function renderLayerPanel(layers) {
       if (!group) return;
       e.target.checked ? group.addTo(map) : map.removeLayer(group);
     });
+
+    if (layer.data_type === 'resources') {
+      document.querySelector(`.layer-cfg-btn[data-layer-id="${layer.layer_id}"]`)
+        ?.addEventListener('click', e => { e.stopPropagation(); toggleConfigPanel(layer.layer_id); });
+    }
   });
+}
+
+// ── Layer config panel ────────────────────────────────────────────────────────
+
+function toggleConfigPanel(id) {
+  const panel = document.getElementById(`cfg-panel-${id}`);
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  renderConfigPanel(id, panel);
+  panel.style.display = 'block';
+}
+
+function renderConfigPanel(id, panelEl) {
+  const cfg            = layerConfig[id] || { mainProp: null, thresholds: [], popupProps: null };
+  const numericProps   = layerNumericProps[id] || [];
+  const allProps       = (layerAllProps[id] || []).filter(p => p !== 'id' && p !== 'type');
+  const activeThresh   = (cfg.mainProp && cfg.thresholds.length) ? cfg.thresholds : (cfg.mainProp ? defaultThresholds() : []);
+
+  panelEl.innerHTML = `
+    <div class="cfg-section">
+      <div class="cfg-label">Właściwość główna</div>
+      <select class="cfg-main-prop">
+        <option value="">— brak —</option>
+        ${numericProps.map(p => `<option value="${p}" ${cfg.mainProp === p ? 'selected' : ''}>${p}</option>`).join('')}
+      </select>
+    </div>
+    ${cfg.mainProp ? `
+    <div class="cfg-section">
+      <div class="cfg-label">Progi kolorów <button class="cfg-thresh-add">+ dodaj</button></div>
+      <div class="cfg-threshold-list">
+        ${activeThresh.map(t => `
+          <div class="cfg-threshold-row">
+            <input class="cfg-thresh-val" type="number" placeholder="max wartość" value="${t.value ?? ''}" />
+            <input class="cfg-thresh-color" type="color" value="${t.color || '#10b981'}" />
+            <button class="cfg-thresh-del">✕</button>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+    <div class="cfg-section">
+      <div class="cfg-label">
+        Właściwości w popupie
+        <button class="cfg-props-all">wszystkie</button>
+        <button class="cfg-props-none">żadne</button>
+      </div>
+      <input class="cfg-prop-filter" type="text" placeholder="szukaj…" />
+      <div class="cfg-prop-list">
+        ${allProps.map(p => {
+          const checked = !cfg.popupProps?.length || cfg.popupProps.includes(p) ? 'checked' : '';
+          return `<label class="cfg-prop-check"><input type="checkbox" value="${p}" ${checked}> ${p}</label>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="cfg-section">
+      <button class="cfg-apply-btn">Zastosuj</button>
+    </div>
+  `;
+
+  panelEl.querySelector('.cfg-apply-btn').addEventListener('click', () => applyConfigPanel(id, panelEl));
+  panelEl.querySelector('.cfg-thresh-add')?.addEventListener('click', () => addThresholdRow(panelEl));
+  panelEl.querySelectorAll('.cfg-thresh-del').forEach(b =>
+    b.addEventListener('click', e => e.target.closest('.cfg-threshold-row').remove())
+  );
+  panelEl.querySelector('.cfg-main-prop').addEventListener('change', () => {
+    layerConfig[id] = { ...(layerConfig[id] || {}), mainProp: panelEl.querySelector('.cfg-main-prop').value || null };
+    renderConfigPanel(id, panelEl);
+  });
+  panelEl.querySelector('.cfg-props-all')?.addEventListener('click', () => {
+    panelEl.querySelectorAll('.cfg-prop-list input').forEach(cb => cb.checked = true);
+  });
+  panelEl.querySelector('.cfg-props-none')?.addEventListener('click', () => {
+    panelEl.querySelectorAll('.cfg-prop-list input').forEach(cb => cb.checked = false);
+  });
+  panelEl.querySelector('.cfg-prop-filter')?.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    panelEl.querySelectorAll('.cfg-prop-check').forEach(el => {
+      el.style.display = el.textContent.trim().toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+
+function applyConfigPanel(id, panelEl) {
+  const mainProp   = panelEl.querySelector('.cfg-main-prop')?.value || null;
+  const thresholds = [];
+  panelEl.querySelectorAll('.cfg-threshold-row').forEach(row => {
+    const val   = parseFloat(row.querySelector('.cfg-thresh-val').value);
+    const color = row.querySelector('.cfg-thresh-color').value;
+    thresholds.push(isNaN(val) ? { color } : { value: val, color });
+  });
+  thresholds.sort((a, b) => (a.value == null ? 1 : b.value == null ? -1 : a.value - b.value));
+
+  const allProps   = (layerAllProps[id] || []).filter(p => p !== 'id' && p !== 'type');
+  const checked    = [...panelEl.querySelectorAll('.cfg-prop-list input:checked')].map(el => el.value);
+  const popupProps = checked.length === allProps.length ? null : checked;
+
+  saveLayerConfig(id, { mainProp, thresholds, popupProps });
+  fetchAndRenderLayer(id);
+
+  const btn = panelEl.querySelector('.cfg-apply-btn');
+  btn.textContent = 'Zastosowano ✓';
+  setTimeout(() => { btn.textContent = 'Zastosuj'; }, 1500);
+}
+
+function addThresholdRow(panelEl) {
+  const list = panelEl.querySelector('.cfg-threshold-list');
+  const row  = document.createElement('div');
+  row.className = 'cfg-threshold-row';
+  row.innerHTML = `<input class="cfg-thresh-val" type="number" placeholder="max wartość" /><input class="cfg-thresh-color" type="color" value="#10b981" /><button class="cfg-thresh-del">✕</button>`;
+  row.querySelector('.cfg-thresh-del').addEventListener('click', () => row.remove());
+  list.appendChild(row);
 }
 
 // ── Events panel ──────────────────────────────────────────────────────────────
@@ -366,6 +556,7 @@ async function refresh() {
       const layers = await layersRes.json();
       layers.forEach(l => {
         if (!(l.layer_id in layerEnabled)) layerEnabled[l.layer_id] = true;
+        if (!(l.layer_id in layerConfig))  layerConfig[l.layer_id]  = loadLayerConfig(l.layer_id);
         layerMeta[l.layer_id] = l;
       });
       renderLayerPanel(layers);
