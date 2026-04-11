@@ -38,7 +38,6 @@ class SimulationPlugin(BasePlugin):
         self._threat_zone: dict | None = None
         self._alerts: list[dict] = []
         self._task: asyncio.Task | None = None
-        self._resources: list[dict] = []  # injected by caller if needed
 
     # ── Public control ───────────────────────────────────────────────────────
 
@@ -127,10 +126,32 @@ class SimulationPlugin(BasePlugin):
             if not self._running:
                 break
             self._tick += 1
-            self._advance()
+            resources = await self._load_resources()
+            self._advance(resources)
             await self._persist_event()
 
-    def _advance(self) -> None:
+    async def _load_resources(self) -> list[dict]:
+        """Pull resource features from registered resource plugins."""
+        from plugins import registry  # late import avoids circular dependency
+        resources: list[dict] = []
+        for layer_id in ("hospitals", "social", "schools", "fire_stations"):
+            plugin = registry.get(layer_id)
+            if plugin is None:
+                continue
+            fc = await plugin.fetch()
+            for feature in fc.get("features", []):
+                props = feature.get("properties", {})
+                coords = feature["geometry"]["coordinates"]
+                resources.append({
+                    "id":        props.get("id"),
+                    "name":      props.get("name", ""),
+                    "type":      props.get("type", ""),
+                    "latitude":  coords[1],
+                    "longitude": coords[0],
+                })
+        return resources
+
+    def _advance(self, resources: list[dict]) -> None:
         elapsed_hours = (self._tick * self._config.tick_interval_seconds) / 3600.0
         intensity = self._config.fire_intensity
 
@@ -159,9 +180,8 @@ class SimulationPlugin(BasePlugin):
             },
         }
 
-        # Spatial check
-        if self._resources:
-            self._alerts = check_intersections(self._threat_zone, self._resources)
+        # Spatial check against live resources
+        self._alerts = check_intersections(self._threat_zone, resources)
 
     async def _persist_event(self) -> None:
         elapsed_min = self._tick * self._config.tick_interval_seconds / 60
