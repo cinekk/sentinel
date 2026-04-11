@@ -57,23 +57,38 @@
   <!-- ── Sidebar ────────────────────────────────────────────────────────────── -->
   <div id="sidebar">
 
-    <!-- Layers -->
-    <div class="sidebar-section">
-      <div class="section-header">
-        <span class="section-label">Warstwy</span>
-        <span class="section-count" id="layer-count">—</span>
-      </div>
+    <!-- Tab bar -->
+    <div id="sidebar-tabs">
+      <button class="stab active" data-tab="layers" title="Warstwy mapy">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1L15 5l-7 4L1 5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M1 10l7 4 7-4" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        WARSTWY
+        <span class="stab-badge" id="layer-count">—</span>
+      </button>
+      <button class="stab" data-tab="ai" title="Asystent AI">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7.5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5c0 .9-.48 1.68-1.2 2.12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11" r="1" fill="currentColor"/></svg>
+        AI
+      </button>
+      <button class="stab" data-tab="sim" title="Symulacje">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 13V6M6 13V3M9 13V8M12 13V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        SIM
+        <span class="stab-badge stab-badge--sim" id="sim-tab-badge" style="display:none">●</span>
+      </button>
+      <button class="stab" data-tab="log" title="Dziennik zdarzeń">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        LOG
+        <span class="stab-badge" id="events-count-badge">0</span>
+      </button>
+    </div>
+
+    <!-- Panel: Layers -->
+    <div class="tab-panel active" data-panel="layers">
       <div id="layer-list">
         <div class="empty-state">Ładowanie…</div>
       </div>
     </div>
 
-    <!-- AI Assistant -->
-    <div class="sidebar-section" id="assistant-section">
-      <div class="section-header">
-        <span class="section-label">Asystent AI</span>
-        <span class="section-count ai-badge">OPEN WEIGHTS</span>
-      </div>
+    <!-- Panel: AI -->
+    <div class="tab-panel" data-panel="ai">
       <div id="chat-panel">
         <div id="chat-messages">
           <div class="chat-msg assistant">Opisz sytuację kryzysową lub analizę — dostosuję widok dashboardu.</div>
@@ -98,78 +113,74 @@
       </div>
     </div>
 
-    <!-- Simulation -->
-    <div class="sidebar-section">
-      <div class="section-header">
-        <span class="section-label">Symulacja</span>
-        <span id="sim-tick"></span>
-      </div>
-      <div class="sim-body">
-        <div id="sim-status">
+    <!-- Panel: Simulation -->
+    <div class="tab-panel" data-panel="sim">
+      <!-- Fire simulation -->
+      <div class="sim-group">
+        <div class="sim-group-header">
+          <span class="section-label">Symulacja pożaru</span>
+          <span id="sim-tick"></span>
           <span id="sim-dot"></span>
-          <span id="sim-label">Gotowa</span>
+          <span id="sim-label" class="sim-status-label">Gotowa</span>
         </div>
-
-        <div class="sim-controls">
-          <button class="sim-btn primary" id="btn-start">▶ START</button>
-          <button class="sim-btn danger"  id="btn-stop">■ STOP</button>
-          <button class="sim-btn"         id="btn-reset">↺ RESET</button>
-        </div>
-
-        <div class="sim-field">
-          <label>Wiatr km/h <span id="val-wind">15</span></label>
-          <input type="range" id="rng-wind" min="5" max="60" value="15" step="5" />
-        </div>
-
-        <div class="sim-field">
-          <label>Kierunek° <span id="val-dir">45 (NE)</span></label>
-          <input type="range" id="rng-dir" min="0" max="359" value="45" step="5" />
-        </div>
-
-        <div class="sim-field">
-          <label>Intensywność <span id="val-int">1.0</span></label>
-          <input type="range" id="rng-int" min="1" max="5" value="1" step="1" />
+        <div class="sim-body">
+          <div class="sim-controls">
+            <button class="sim-btn primary" id="btn-start">▶ START</button>
+            <button class="sim-btn danger"  id="btn-stop">■ STOP</button>
+            <button class="sim-btn"         id="btn-reset">↺ RESET</button>
+          </div>
+          <div class="sim-field">
+            <label>Wiatr km/h <span id="val-wind">15</span></label>
+            <input type="range" id="rng-wind" min="5" max="60" value="15" step="5" />
+          </div>
+          <div class="sim-field">
+            <label>Kierunek° <span id="val-dir">45 (NE)</span></label>
+            <input type="range" id="rng-dir" min="0" max="359" value="45" step="5" />
+          </div>
+          <div class="sim-field">
+            <label>Intensywność <span id="val-int">1.0</span></label>
+            <input type="range" id="rng-int" min="1" max="5" value="1" step="1" />
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 112 Emergency Calls -->
-    <div class="sidebar-section">
-      <div class="section-header">
-        <span class="section-label">Zgłoszenia 112</span>
-        <span class="section-count" id="e112-count">0</span>
-      </div>
-      <div class="sim-body">
-        <div id="e112-status">
+      <!-- 112 calls -->
+      <div class="sim-group">
+        <div class="sim-group-header">
+          <span class="section-label">Zgłoszenia 112</span>
           <span id="e112-dot"></span>
-          <span id="e112-label">Gotowa</span>
+          <span id="e112-label" class="sim-status-label">Gotowa</span>
+          <span class="stab-badge" id="e112-count" style="margin-left:auto">0</span>
         </div>
-        <div class="sim-controls">
-          <button class="sim-btn primary" id="btn-e112-start">▶ START</button>
-          <button class="sim-btn"         id="btn-e112-pause">⏸ PAUZA</button>
-          <button class="sim-btn danger"  id="btn-e112-reset">↺ RESET</button>
+        <div class="sim-body">
+          <div class="sim-controls">
+            <button class="sim-btn primary" id="btn-e112-start">▶ START</button>
+            <button class="sim-btn"         id="btn-e112-pause">⏸ PAUZA</button>
+            <button class="sim-btn danger"  id="btn-e112-reset">↺ RESET</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Events -->
-    <div class="sidebar-section" style="flex:0">
-      <div class="section-header">
+    <!-- Panel: Log -->
+    <div class="tab-panel tab-panel--log" data-panel="log">
+      <div class="log-header">
         <span class="section-label">Zdarzenia</span>
-        <span class="section-count" id="events-count-badge">0</span>
-        <button id="btn-clear-events" title="Wyczyść zdarzenia">✕</button>
+        <button id="btn-clear-events" title="Wyczyść zdarzenia">✕ WYCZYŚĆ</button>
       </div>
-    </div>
-    <div id="event-list">
-      <div class="empty-state">Brak zdarzeń</div>
+      <div id="event-list">
+        <div class="empty-state">Brak zdarzeń</div>
+      </div>
+      <div id="refresh-info">Auto-odświeżanie co 30s</div>
     </div>
 
-    <div id="refresh-info">Auto-odświeżanie co 30s</div>
   </div>
 
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -163,17 +163,79 @@ header .subtitle {
   overflow: hidden;
 }
 
-.sidebar-section {
-  border-bottom: 1px solid var(--border-dim);
+/* ── Sidebar tabs ────────────────────────────────────────────────────────────── */
+
+#sidebar-tabs {
+  display: flex;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--border-mid);
+  background: var(--bg-deep);
 }
 
-.section-header {
+.stab {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 9px 14px 7px;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 4px 7px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: .52rem;
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+  position: relative;
 }
+
+.stab svg { opacity: .5; transition: opacity .15s; }
+
+.stab:hover {
+  color: var(--text-mid);
+  background: var(--bg-card);
+}
+.stab:hover svg { opacity: .75; }
+
+.stab.active {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+  background: var(--bg-base);
+}
+.stab.active svg { opacity: 1; }
+
+.stab-badge {
+  font-family: var(--font-mono);
+  font-size: .5rem;
+  color: var(--text-dim);
+  background: var(--border-dim);
+  padding: 1px 4px;
+  border-radius: 2px;
+  line-height: 1.4;
+}
+.stab.active .stab-badge { color: var(--amber); background: var(--amber-glow); }
+
+.stab-badge--sim { background: none; color: var(--red); padding: 0; font-size: .55rem; }
+
+/* ── Tab panels ──────────────────────────────────────────────────────────────── */
+
+.tab-panel {
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+.tab-panel.active { display: flex; }
+
+/* Log panel needs the event list to scroll */
+.tab-panel--log {
+  overflow: hidden;
+}
+
+/* ── Shared section label (used inside panels) ───────────────────────────────── */
 
 .section-label {
   font-family: var(--font-mono);
@@ -183,6 +245,7 @@ header .subtitle {
   color: var(--text-dim);
 }
 
+/* kept for any remaining .section-count references */
 .section-count {
   margin-left: auto;
   font-family: var(--font-mono);
@@ -195,8 +258,16 @@ header .subtitle {
 
 /* ── Layer panel ─────────────────────────────────────────────────────────────── */
 
+.tab-panel[data-panel="layers"] {
+  overflow-y: auto;
+}
+
+.tab-panel[data-panel="layers"]::-webkit-scrollbar { width: 3px; }
+.tab-panel[data-panel="layers"]::-webkit-scrollbar-track { background: transparent; }
+.tab-panel[data-panel="layers"]::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
 #layer-list {
-  padding: 4px 10px 10px;
+  padding: 8px 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -271,16 +342,36 @@ header .subtitle {
 .layer-dot.air_quality { background: var(--green); }
 .layer-dot.flood_zone { background: #38bdf8; }
 
-/* ── Simulation controls ─────────────────────────────────────────────────────── */
+/* ── Simulation panel ────────────────────────────────────────────────────────── */
 
-.sim-body { padding: 8px 12px 12px; }
+.tab-panel[data-panel="sim"] {
+  overflow-y: auto;
+}
+.tab-panel[data-panel="sim"]::-webkit-scrollbar { width: 3px; }
+.tab-panel[data-panel="sim"]::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
 
-#sim-status {
+.sim-group {
+  border-bottom: 1px solid var(--border-dim);
+}
+.sim-group:last-child { border-bottom: none; }
+
+.sim-group-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  padding: 10px 14px 8px;
 }
+
+.sim-status-label {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  color: var(--text-mid);
+  letter-spacing: .04em;
+}
+
+/* ── Simulation controls ─────────────────────────────────────────────────────── */
+
+.sim-body { padding: 8px 12px 12px; }
 
 #sim-dot {
   width: 8px; height: 8px;
@@ -380,7 +471,14 @@ header .subtitle {
 
 /* ── Events list ─────────────────────────────────────────────────────────────── */
 
-.events-header { display: flex; align-items: center; gap: 8px; padding: 9px 14px 7px; }
+.log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border-dim);
+  flex-shrink: 0;
+}
 
 #event-list {
   flex: 1;
@@ -460,11 +558,12 @@ header .subtitle {
   border: 1px solid var(--border-mid);
   border-radius: 3px;
   color: var(--text-dim);
-  font-size: .6rem;
-  padding: 2px 6px;
+  font-size: .55rem;
+  padding: 2px 7px;
   cursor: pointer;
   transition: color .12s, border-color .12s;
   font-family: var(--font-mono);
+  letter-spacing: .06em;
 }
 
 #btn-clear-events:hover {
@@ -878,6 +977,27 @@ header .subtitle {
 
 .popup-row span { color: var(--text-hi); font-weight: 500; }
 
+/* ── Cluster icons ───────────────────────────────────────────────────────────── */
+
+.cluster-icon {
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid var(--cc, #3b82f6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: filter .15s, box-shadow .15s;
+}
+.cluster-icon:hover {
+  filter: brightness(1.35);
+}
+
 /* ── Resource type icons on map ──────────────────────────────────────────────── */
 
 .map-marker-wrap {
@@ -1118,10 +1238,6 @@ header .subtitle {
 
 /* ── AI Assistant chat panel ──────────────────────────────────────────────── */
 
-#assistant-section {
-  flex-shrink: 0;
-}
-
 .ai-badge {
   font-family: var(--font-mono);
   font-size: .5rem;
@@ -1134,10 +1250,15 @@ header .subtitle {
   margin-left: auto;
 }
 
+.tab-panel[data-panel="ai"] {
+  overflow: hidden;
+}
+
 #chat-panel {
   display: flex;
   flex-direction: column;
-  max-height: 220px;
+  flex: 1;
+  overflow: hidden;
 }
 
 #chat-messages {
@@ -1148,7 +1269,6 @@ header .subtitle {
   flex-direction: column;
   gap: 6px;
   min-height: 40px;
-  max-height: 160px;
 }
 
 #chat-messages::-webkit-scrollbar { width: 3px; }
