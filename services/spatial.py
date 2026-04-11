@@ -90,13 +90,13 @@ def check_intersections(
 
 def _recommended_action(resource_type: str, level: AlertLevel) -> str:
     actions = {
-        ("school", "inside"):       "Zamknij i ewakuuj natychmiast",
-        ("school", "approaching"):  "Przygotuj ewakuację szkoły",
-        ("care_home", "inside"):    "Ewakuacja priorytetowa — DPS",
-        ("care_home", "approaching"): "Alert dla personelu DPS, przygotuj ewakuację",
-        ("hospital", "inside"):     "Ewakuacja lub przygotuj przyjęcie rannych",
-        ("hospital", "approaching"): "Przygotuj oddział na zwiększony napływ",
-        ("fire_station", "inside"): "Wycofaj jednostki, zagrożenie strefą",
-        ("fire_station", "approaching"): "Stan gotowości — wkrótce w strefie",
+        ("school",        "inside"):      "Zamknij i ewakuuj natychmiast",
+        ("school",        "approaching"): "Przygotuj ewakuację szkoły",
+        ("social",        "inside"):      "Ewakuacja priorytetowa — DPS",
+        ("social",        "approaching"): "Alert dla personelu DPS, przygotuj ewakuację",
+        ("hospital",      "inside"):      "Ewakuacja lub przygotuj przyjęcie rannych",
+        ("hospital",      "approaching"): "Przygotuj oddział na zwiększony napływ",
+        ("fire_station",  "inside"):      "Wycofaj jednostki — jednostka w strefie zagrożenia",
+        ("fire_station",  "approaching"): "Stan gotowości — wkrótce w strefie",
     }
-    return actions.get((resource_type, level), f"Alert: poziom {level} — zastosuj procedury")
+    return actions.get((resource_type, level), f"Alert {level} — zastosuj procedury")

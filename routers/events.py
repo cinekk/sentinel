@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, EventRow
@@ -15,6 +15,13 @@ async def list_events(db: AsyncSession = Depends(get_db)) -> list[EventOut]:
     result = await db.execute(select(EventRow).order_by(EventRow.time.desc()))
     rows = result.scalars().all()
     return [EventOut.model_validate(row, from_attributes=True) for row in rows]
+
+
+@router.delete("", status_code=200)
+async def clear_events(db: AsyncSession = Depends(get_db)) -> dict:
+    result = await db.execute(delete(EventRow))
+    await db.commit()
+    return {"deleted": result.rowcount}
 
 
 @router.post("", response_model=EventOut, status_code=201)

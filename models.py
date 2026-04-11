@@ -50,12 +50,19 @@ class IngestResponse(BaseModel):
 
 
 class ResourceOut(BaseModel):
-    id: int
-    type: Literal["ambulance", "fire_truck", "police", "rescue"]
+    id: str
     name: str
+    type: Literal["hospital", "school", "social", "fire_station"]
+    layer: str
     latitude: float
     longitude: float
-    status: Literal["available", "dispatched", "offline"]
+    beds: int | None = None
+    emergency: bool | None = None
+    capacity: int | None = None
+    operator: str | None = None
+    facility_type: str | None = None
+    school_type: str | None = None
+    unit: str | None = None  # PSP / OSP
 
 
 class LayerMeta(BaseModel):

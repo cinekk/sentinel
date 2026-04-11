@@ -10,64 +10,106 @@
 <body>
 
 <header>
-  <div>
-    <h1>⚠ SENTINEL</h1>
-    <div class="subtitle">Platforma Świadomości Sytuacyjnej — Województwo Lubelskie</div>
+  <div class="header-brand">
+    <h1>SENTINEL</h1>
+    <div class="subtitle">ŚWIADOMOŚĆ SYTUACYJNA · WOJ. LUBELSKIE</div>
   </div>
   <div id="status-bar">
-    <span><span id="status-dot"></span> LIVE</span>
-    <span id="last-updated">odświeżanie...</span>
+    <div class="status-pill">
+      <span id="status-dot"></span>
+      <span>LIVE</span>
+    </div>
+    <span id="last-updated">—</span>
     <span id="event-count">— zdarzeń</span>
   </div>
 </header>
 
 <div id="main">
-  <div id="map"></div>
 
+  <!-- ── Map ────────────────────────────────────────────────────────────────── -->
+  <div id="map">
+
+    <!-- Alert HUD overlay (click to expand) -->
+    <div id="alert-hud">
+      <div class="hud-header" id="hud-toggle" title="Kliknij aby rozwinąć">
+        <span class="hud-title">ZAGROŻENIE</span>
+        <span class="hud-badge">ALERT</span>
+        <span class="hud-count" id="hud-count"></span>
+        <span class="hud-expand-hint">↗ rozwiń</span>
+      </div>
+      <div class="hud-alerts" id="hud-alert-list"></div>
+    </div>
+
+    <!-- Full alert modal -->
+    <div id="alert-modal" class="alert-modal-backdrop">
+      <div class="alert-modal-panel">
+        <div class="alert-modal-header">
+          <span class="alert-modal-title">STREFA ZAGROŻENIA — OBIEKTY</span>
+          <span class="alert-modal-sub" id="modal-sub"></span>
+          <button class="alert-modal-close" id="alert-modal-close">✕ ZAMKNIJ</button>
+        </div>
+        <div class="alert-modal-body" id="alert-modal-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Sidebar ────────────────────────────────────────────────────────────── -->
   <div id="sidebar">
 
+    <!-- Layers -->
     <div class="sidebar-section">
-      <h3>Warstwy</h3>
+      <div class="section-header">
+        <span class="section-label">Warstwy</span>
+        <span class="section-count" id="layer-count">—</span>
+      </div>
       <div id="layer-list">
-        <div class="empty-state">Ładowanie warstw…</div>
+        <div class="empty-state">Ładowanie…</div>
       </div>
     </div>
 
+    <!-- Simulation -->
     <div class="sidebar-section">
-      <h3>Symulacja</h3>
-
-      <div id="sim-status">
-        <span id="sim-dot"></span>
-        <span id="sim-label">Zatrzymana</span>
-        <span id="sim-tick" style="margin-left:auto;color:#3a4f6a"></span>
+      <div class="section-header">
+        <span class="section-label">Symulacja</span>
+        <span id="sim-tick"></span>
       </div>
+      <div class="sim-body">
+        <div id="sim-status">
+          <span id="sim-dot"></span>
+          <span id="sim-label">Gotowa</span>
+        </div>
 
-      <div class="sim-controls">
-        <button class="sim-btn primary" id="btn-start">▶ Start</button>
-        <button class="sim-btn danger"  id="btn-stop">■ Stop</button>
-        <button class="sim-btn"         id="btn-reset">↺ Reset</button>
+        <div class="sim-controls">
+          <button class="sim-btn primary" id="btn-start">▶ START</button>
+          <button class="sim-btn danger"  id="btn-stop">■ STOP</button>
+          <button class="sim-btn"         id="btn-reset">↺ RESET</button>
+        </div>
+
+        <div class="sim-field">
+          <label>Wiatr km/h <span id="val-wind">15</span></label>
+          <input type="range" id="rng-wind" min="5" max="60" value="15" step="5" />
+        </div>
+
+        <div class="sim-field">
+          <label>Kierunek° <span id="val-dir">45 (NE)</span></label>
+          <input type="range" id="rng-dir" min="0" max="359" value="45" step="5" />
+        </div>
+
+        <div class="sim-field">
+          <label>Intensywność <span id="val-int">1.0</span></label>
+          <input type="range" id="rng-int" min="1" max="5" value="1" step="1" />
+        </div>
       </div>
-
-      <div class="sim-field">
-        <label>Wiatr km/h <span id="val-wind">15</span></label>
-        <input type="range" id="rng-wind" min="5" max="60" value="15" step="5" />
-      </div>
-
-      <div class="sim-field">
-        <label>Kierunek wiatru° <span id="val-dir">45 (NE)</span></label>
-        <input type="range" id="rng-dir" min="0" max="359" value="45" step="5" />
-      </div>
-
-      <div class="sim-field">
-        <label>Intensywność <span id="val-int">1.0</span></label>
-        <input type="range" id="rng-int" min="1" max="5" value="1" step="1" />
-      </div>
-
-      <div id="alert-list"></div>
     </div>
 
+    <!-- Events -->
     <div class="sidebar-section" style="flex:0">
-      <h3>Zdarzenia</h3>
+      <div class="section-header">
+        <span class="section-label">Zdarzenia</span>
+        <span class="section-count" id="events-count-badge">0</span>
+        <button id="btn-clear-events" title="Wyczyść zdarzenia">✕</button>
+      </div>
     </div>
     <div id="event-list">
       <div class="empty-state">Brak zdarzeń</div>
@@ -75,6 +117,7 @@
 
     <div id="refresh-info">Auto-odświeżanie co 30s</div>
   </div>
+
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
