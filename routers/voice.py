@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 import services.crisis_store as store
 from models import BriefingResponse, BriefingWordTiming
 from plugins import registry
-from routers.v1_layers import AIR_QUALITY_DATA, WEATHER_DATA
+from routers.v1_layers import get_air_quality_data, WEATHER_DATA
 from services.briefing import BriefingContext, generate_briefing_text
 from services.spatial import facilities_in_zones
 from services.tts import synthesize_with_timestamps
@@ -42,7 +42,7 @@ async def voice_briefing() -> BriefingResponse:
         active_crises=active,
         affected=affected,
         sim_state=sim_state,
-        air_quality=AIR_QUALITY_DATA,
+        air_quality=await get_air_quality_data(),
         weather=WEATHER_DATA,
     )
     text = generate_briefing_text(ctx)
