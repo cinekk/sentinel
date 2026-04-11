@@ -103,6 +103,18 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
     - Returns `total`, `by_type`, `hospital_beds`, full `resources` list
 - [x] Smoke test: 1 791 total resources loaded; 663 within 50km of Puławy (27 hospitals, 100 DPS, 531 schools, 5 stations)
 
+### Phase 4b — Crisis API ✅
+> Goal: unified `/api/v1/crisis` store + operator-facing endpoints
+> Note: Grafana was dropped; these endpoints serve the owned frontend and future operator tooling.
+
+- [x] `services/crisis_store.py` — in-memory CrisisEvent store (type, lat, lon, name, radii, status, source)
+- [x] `services/spatial.py` — add `haversine()`, `circle_polygon()`, `facilities_in_zones()`
+- [x] `routers/crisis.py` — `POST/GET/PATCH/DELETE /api/v1/crisis` + stats + affected + geojson endpoints
+- [x] `routers/fires_compat.py` — `/api/v1/fires` alias (operator script compatibility)
+- [x] `routers/v1_layers.py` — `/api/v1/layers/hospitals|schools|social-facilities|air-quality|weather`
+- [x] `plugins/resources.py` — add `display_type` property (`"Szpital"`, `"Szkoła"`, `"DPS/Placówka"`)
+- [x] `main.py` — register new routers (v0.5.0)
+
 ### Phase 5 — Real Air Quality Data (GIOŚ)
 > Goal: real PM2.5/PM10 displayed alongside simulation — earns +10 bonus points
 

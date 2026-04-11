@@ -85,3 +85,36 @@ class ThreatZone(BaseModel):
     type: Literal["Feature"] = "Feature"
     geometry: dict
     properties: dict
+
+
+# --- Crisis Event models ---
+
+class CrisisEvent(BaseModel):
+    id: str
+    type: str
+    lat: float
+    lon: float
+    name: str
+    evac_radius_km: float = 5.0
+    warn_radius_km: float = 12.0
+    status: str = "active"
+    source: str = "operator"
+    created_at: float
+
+
+class CrisisEventCreate(BaseModel):
+    type: str = "fire"
+    lat: float
+    lon: float
+    name: str = "Pożar"
+    evac_radius_km: float = 5.0
+    warn_radius_km: float = 12.0
+    status: str = "active"
+    source: str = "operator"
+
+
+class CrisisEventPatch(BaseModel):
+    name: str | None = None
+    evac_radius_km: float | None = None
+    warn_radius_km: float | None = None
+    status: str | None = None
