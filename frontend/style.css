@@ -1238,3 +1238,123 @@ header .subtitle {
   background: rgba(16,185,129,.08);
   box-shadow: 0 0 8px rgba(16,185,129,.12);
 }
+
+#briefing-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--amber-border);
+  border-radius: 3px;
+  color: var(--amber);
+  font-size: .7rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background .12s, box-shadow .12s;
+  flex-shrink: 0;
+}
+
+#briefing-btn:hover {
+  background: var(--amber-glow);
+  box-shadow: 0 0 8px var(--amber-glow);
+}
+
+#briefing-btn:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
+/* ── Voice Briefing karaoke widget ──────────────────────────────────────────── */
+
+.briefing-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: 4px;
+  margin: 6px 10px 10px;
+  overflow: hidden;
+}
+
+.briefing-widget.hidden { display: none; }
+
+.briefing-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.briefing-title {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  letter-spacing: .12em;
+  color: var(--amber);
+  flex: 1;
+}
+
+.briefing-ctrl {
+  background: none;
+  border: 1px solid var(--border-hi);
+  border-radius: 3px;
+  color: var(--text-mid);
+  font-size: .65rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color .12s, border-color .12s;
+}
+
+.briefing-ctrl:hover {
+  color: var(--text-hi);
+  border-color: var(--amber-border);
+}
+
+.briefing-text {
+  padding: 10px 12px;
+  font-size: .72rem;
+  line-height: 1.7;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.briefing-text::-webkit-scrollbar { width: 3px; }
+.briefing-text::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+.briefing-word {
+  color: rgba(255,255,255,.25);
+  transition: color .15s, text-shadow .15s;
+}
+
+.briefing-word.spoken {
+  color: rgba(255,255,255,.9);
+}
+
+.briefing-word.speaking {
+  color: var(--amber);
+  text-shadow: 0 0 8px var(--amber-glow);
+}
+
+.briefing-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border-dim);
+  position: relative;
+  height: 24px;
+}
+
+.briefing-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--amber-glow);
+  transition: width .1s linear;
+}
+
+#briefing-time {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: var(--text-dim);
+  margin-left: auto;
+  position: relative;
+  z-index: 1;
+}

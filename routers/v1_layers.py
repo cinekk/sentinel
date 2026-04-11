@@ -8,7 +8,7 @@ from plugins import registry
 router = APIRouter(prefix="/api/v1/layers", tags=["v1-layers"])
 
 # ── Mock GIOŚ air-quality stations ────────────────────────────────────────────
-_AIR_QUALITY = [
+AIR_QUALITY_DATA = _AIR_QUALITY = [
     {"name": "GIOŚ Puławy", "lat": 51.4158, "lon": 21.9698, "pm25": 18.3, "pm10": 32.1, "status": "dobra"},
     {"name": "GIOŚ Lublin ul. Obywatelska", "lat": 51.2490, "lon": 22.5665, "pm25": 24.7, "pm10": 41.2, "status": "umiarkowana"},
     {"name": "GIOŚ Chełm", "lat": 51.1431, "lon": 23.4722, "pm25": 15.2, "pm10": 28.4, "status": "dobra"},
@@ -18,7 +18,7 @@ _AIR_QUALITY = [
 ]
 
 # ── Mock IMGW weather stations ─────────────────────────────────────────────────
-_WEATHER = [
+WEATHER_DATA = _WEATHER = [
     {"name": "IMGW Puławy", "lat": 51.4158, "lon": 21.9698, "temp_c": 12.3, "wind_dir": "NE", "wind_speed_kmh": 15, "humidity_pct": 68},
     {"name": "IMGW Lublin", "lat": 51.2490, "lon": 22.5665, "temp_c": 11.8, "wind_dir": "NE", "wind_speed_kmh": 18, "humidity_pct": 72},
     {"name": "IMGW Zamość", "lat": 50.7231, "lon": 23.2519, "temp_c": 10.9, "wind_dir": "E", "wind_speed_kmh": 12, "humidity_pct": 75},
