@@ -46,7 +46,8 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 | 2 — Thin Frontend | *(completed, no separate file)* | ✅ Done |
 | 3 — Simulation Engine | *(completed, no separate file)* | ✅ Done |
 | 4 — Resource Data Plugins | *(completed, no separate file)* | ✅ Done |
-| 4b — Crisis API | *(completed, no separate file)* | ✅ Done |
+| 4b — Crisis API | [phase-4b-crisis-api.md](phase-4b-crisis-api.md) | ✅ Done |
+| 4c — Unified Crisis/Simulation | [phase-4c-unified-crisis.md](phase-4c-unified-crisis.md) | ✅ Done |
 | 5 — Real Air Quality (GIOŚ) | [PHASE-5-gios.md](PHASE-5-gios.md) | 🔲 Not started |
 | 6 — AI Classification & Voice | [PHASE-6-ai-voice.md](PHASE-6-ai-voice.md) | 🔲 Not started |
 | 7 — useMaps Integration | [PHASE-7-usemaps.md](PHASE-7-usemaps.md) | 🔲 Not started |
@@ -79,99 +80,28 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 - Real Lublin voivodeship boundary from Nominatim OSM (16 814-point polygon)
 
 ### Phase 4b — Crisis API ✅
-- `services/crisis_store.py` — in-memory CrisisEvent store (type, lat, lon, name, radii, status, source)
-- `services/spatial.py` — `haversine()`, `circle_polygon()`, `facilities_in_zones()`
-- `routers/crisis.py` — `POST/GET/PATCH/DELETE /api/v1/crisis` + stats + affected + geojson
-- `routers/fires_compat.py` — `/api/v1/fires` alias (operator script compatibility)
-- `routers/v1_layers.py` — `/api/v1/layers/hospitals|schools|social-facilities|air-quality|weather`
-- `main.py` — register new routers (v0.5.0)
 
-- [x] `services/crisis_store.py` — in-memory CrisisEvent store (type, lat, lon, name, radii, status, source)
-- [x] `services/spatial.py` — add `haversine()`, `circle_polygon()`, `facilities_in_zones()`
-- [x] `routers/crisis.py` — `POST/GET/PATCH/DELETE /api/v1/crisis` + stats + affected + geojson endpoints
-- [x] `routers/fires_compat.py` — `/api/v1/fires` alias (operator script compatibility)
-- [x] `routers/v1_layers.py` — `/api/v1/layers/hospitals|schools|social-facilities|air-quality|weather`
-- [x] `plugins/resources.py` — add `display_type` property (`"Szpital"`, `"Szkoła"`, `"DPS/Placówka"`)
-- [x] `main.py` — register new routers (v0.5.0)
+→ See [phase-4b-crisis-api.md](phase-4b-crisis-api.md) for full task list and implementation notes.
 
-### Phase 4c — Unified Crisis/Simulation Architecture
-> Goal: simulation writes to crisis_store; all alerts go through one path; ellipse zones replace circles for simulation
-> Detail: `plan/phase-4c-unified-crisis.md`
+### Phase 4c — Unified Crisis/Simulation Architecture ✅
 
-- [x] `models.py` — add `zone_shape`, `semi_major_km`, `semi_minor_km`, `bearing_deg` to `CrisisEvent` / `CrisisEventCreate` / `CrisisEventPatch`
-- [x] `services/spatial.py` — extend `facilities_in_zones` to handle ellipse shape; add `level` + `resource_name` to returned dicts; delete `check_intersections`
-- [x] `plugins/simulation.py` — on start: `crisis_store.add(...)` with `zone_shape="ellipse"`; each tick: `crisis_store.patch(...)` growing ellipse; stop/reset update status; drop `self._alerts` and `self._threat_zone`
-- [x] `routers/simulation.py` — drop `alerts` + `threat_zone` from `GET /api/simulation/state`
-- [x] `frontend/app.js` — remove `renderAlertHud(state.alerts)` from simulation poll; add independent `/api/v1/crisis/affected` poller for HUD
-- [ ] Smoke test: manual crisis event + simulation event both show in HUD via same endpoint
+→ See [phase-4c-unified-crisis.md](phase-4c-unified-crisis.md) for full task list and implementation notes.
 
 ### Phase 5 — Real Air Quality Data (GIOŚ)
-> Goal: real PM2.5/PM10 displayed alongside simulation — earns +10 bonus points
 
-- [ ] `plugins/gios.py` — `GIOSPlugin`
-  - [ ] Fetch PM2.5/PM10 from GIOŚ REST API (v1, no auth):
-    - stations: `GET https://api.gios.gov.pl/pjp-api/v1/rest/station/findAll`
-    - sensors per station: `GET https://api.gios.gov.pl/pjp-api/v1/rest/station/sensors/{stationId}`
-    - readings: `GET https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId}`
-    - AQ index: `GET https://api.gios.gov.pl/pjp-api/v1/rest/aqindex/getIndex/{stationId}`
-  - [ ] Filter to stations in Lublin voivodeship (bbox filter by coords)
-  - [ ] Returns GeoJSON FeatureCollection with sensor readings as properties
-  - [ ] Cache with 10-min TTL (API is slow)
-- [ ] Simulation synthetic PM layer displayed separately alongside real GIOŚ layer
-- [ ] Smoke test: real station markers visible on map with PM2.5 values in popups
+→ See [PHASE-5-gios.md](PHASE-5-gios.md) for full task list and implementation notes.
 
 ### Phase 6 — AI Classification & Voice
-> Goal: every ingested event gets AI-classified; voice in/out works
-> (Was Phase 4 — moved after data layers: demo needs visible objects before AI narrative)
 
-- [ ] `services/llm.py` — `LLMRouter`
-  - [ ] Try Anthropic Claude (`claude-sonnet-4-6`)
-  - [ ] Fallback: Ollama at `OLLAMA_BASE_URL` with Qwen 2.5 14B
-  - [ ] Log which model was used; include `model` field on every event
-- [ ] `services/ai.py` — `classify_event(text, context) -> ClassificationResult`
-  - [ ] Fields: `category`, `severity`, `summary`, `recommended_actions: list[str]`, `affected_radius_km`
-  - [ ] For simulation ticks: generate narrative summary of current threat state
-  - [ ] For targeted intersection alerts: specific recommendation per object type (e.g. "Zamknij szkołę X", "Ewakuuj DPS Y")
-- [ ] `services/tts.py` — `ElevenLabs`
-  - [ ] `synthesize(text) -> bytes` — TTS alert audio
-  - [ ] `transcribe(audio_bytes) -> str` — STT from radio/voice
-- [ ] `routers/ingest.py` — `POST /api/ingest` → classify → save → return `IngestResponse`
-- [ ] `routers/voice.py` — `POST /api/voice` → STT → ingest pipeline
+→ See [PHASE-6-ai-voice.md](PHASE-6-ai-voice.md) for full task list and implementation notes.
 
 ### Phase 7 — useMaps Integration
-> Goal: all layers auto-pushed to useMaps; fallback is own Leaflet frontend
 
-- [ ] `services/usemaps.py` — `UseMapsClient`
-  - [ ] `authenticate(login, password) -> token` via `POST /api/auth/login`
-  - [ ] `push_features(layer_id, geojson) -> None` — upsert features on a layer
-  - [ ] Coordinate transform: WGS84 → EPSG:2180 (using `pyproj`)
-  - [ ] Token refresh on 401
-- [ ] `services/sync.py` — `SyncService`
-  - [ ] On event creation: push updated layer to useMaps
-  - [ ] On simulation tick: push `threat_zones` + `events` layers
-  - [ ] `routers/sync.py` — `POST /api/sync` (force full resync of all layers)
-- [ ] Layer mapping: define which plugin layers map to which useMaps layer IDs
-- [ ] Add `pyproj` to `requirements.txt`
-- [ ] **Fallback**: if useMaps credentials/URL unavailable, own Leaflet frontend is the demo surface — no demo blocker
+→ See [PHASE-7-usemaps.md](PHASE-7-usemaps.md) for full task list and implementation notes.
 
 ### Phase 8 — Polish & Demo
-> Goal: jury-ready demo; voice assistant; clean pitch flow
 
-- [ ] Demo seed script `scripts/seed_demo.py` — loads preset Puławy fire scenario + 10 synthetic events
-- [ ] **5-minute demo script** (in `plan/DEMO_SCRIPT.md`):
-  - [ ] T+0:00 — show map with real GIOŚ air quality layer (baseline)
-  - [ ] T+0:30 — trigger `POST /api/simulation/start` (Puławy fire)
-  - [ ] T+1:00 — watch plume spread on map, synthetic PM2.5 layer updates
-  - [ ] T+1:30 — threat zone reaches School X / DPS Y → alert fires → AI recommendation shown
-  - [ ] T+2:00 — voice command: "ile łóżek szpitalnych w promieniu 30km?" → TTS response
-  - [ ] T+2:30 — resource calculator result visible on map + spoken aloud
-  - [ ] T+3:00 — show layer toggles (disable simulation, show only real GIOŚ) → "any data source, any frontend"
-- [ ] Voice assistant endpoint: `POST /api/voice/command` — STT → parse intent → return action + TTS audio
-  - [ ] Intents: "pokaż zagrożenia", "ile łóżek w promieniu 30km", "odczytaj status"
-- [ ] `GET /api/health` — uptime, active plugins, LLM backend in use, last sync timestamp
-- [ ] Error handling audit: every endpoint returns meaningful HTTP errors
-- [ ] Dockerfile + `docker-compose.yml` (app + Ollama)
-- [ ] `README.md` — how to run, env vars, demo walkthrough
+→ See [PHASE-8-demo.md](PHASE-8-demo.md) for full task list and implementation notes.
 
 ---
 
