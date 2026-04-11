@@ -47,7 +47,7 @@ SENTINEL integrated real-time GIOŚ, Airly, and IMGW data with a facility regist
 
 SENTINEL output: DPS Puławy will reach PM2.5 >200 µg/m³ in est. 22 min; SP nr 4 in 18 min; hospital in 45 min. 6 MPK buses (360 capacity) available; evacuation would take multiple runs and more time than the shelter window. Recommendation: shelter-in-place schools and DPS immediately, seal hospital HVAC, pre-stage ALS ambulances outside plume.
 
-**T+22 / 07:45** — Colonel Wiśniewski reviews SENTINEL dashboard: live plume cone on map, PM2.5 time series with 1-hour projection, color-coded sensitive object pins, resource panel showing bus availability and hospital bed counts. Issues three decisions in 6 minutes.
+**T+22 / 07:45** — Tomasz Kowalczyk (Dyrektor Departamentu Bezpieczeństwa i Zarządzania Kryzysowego, UMWL) reviews SENTINEL dashboard: live plume cone on map, PM2.5 time series with 1-hour projection, color-coded sensitive object pins, resource panel showing bus availability and hospital bed counts. Calls the Marszałek with a 90-second briefing — the Marszałek sees the same screen on his tablet. Issues three decisions in 6 minutes.
 
 **T+28 / 07:51** — SP nr 4 shelter-in-place: 420 children moved to interior corridors, HVAC closed.
 
