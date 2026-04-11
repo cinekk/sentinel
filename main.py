@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from database import init_db
 from plugins import registry
 from plugins.flood_zones import FloodZonesPlugin
+from plugins.gios import GIOSPlugin
 from plugins.mock_boundary import MockBoundaryPlugin, EventsPlugin
 from plugins.resources import FireStationsPlugin, HospitalsPlugin, SchoolsPlugin, SocialPlugin
 from plugins.simulation import SimulationPlugin
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     registry.register(SocialPlugin())
     registry.register(SchoolsPlugin())
     registry.register(FireStationsPlugin())
+    registry.register(GIOSPlugin())
     yield
 
 

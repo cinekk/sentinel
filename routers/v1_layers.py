@@ -1,21 +1,14 @@
 """
-/api/v1/layers/* — resource layer aliases + mock sensor data.
+/api/v1/layers/* — resource layer aliases + sensor data.
 """
+from __future__ import annotations
+
 from fastapi import APIRouter, HTTPException
 
 from plugins import registry
+from plugins.gios import GIOSPlugin, _MOCK_FALLBACK
 
 router = APIRouter(prefix="/api/v1/layers", tags=["v1-layers"])
-
-# ── Mock GIOŚ air-quality stations ────────────────────────────────────────────
-AIR_QUALITY_DATA = _AIR_QUALITY = [
-    {"name": "GIOŚ Puławy", "lat": 51.4158, "lon": 21.9698, "pm25": 18.3, "pm10": 32.1, "status": "dobra"},
-    {"name": "GIOŚ Lublin ul. Obywatelska", "lat": 51.2490, "lon": 22.5665, "pm25": 24.7, "pm10": 41.2, "status": "umiarkowana"},
-    {"name": "GIOŚ Chełm", "lat": 51.1431, "lon": 23.4722, "pm25": 15.2, "pm10": 28.4, "status": "dobra"},
-    {"name": "GIOŚ Zamość", "lat": 50.7231, "lon": 23.2519, "pm25": 19.8, "pm10": 35.6, "status": "dobra"},
-    {"name": "GIOŚ Biała Podlaska", "lat": 52.0333, "lon": 23.1167, "pm25": 12.1, "pm10": 22.3, "status": "dobra"},
-    {"name": "GIOŚ Kraśnik", "lat": 50.9167, "lon": 22.2167, "pm25": 21.4, "pm10": 38.9, "status": "dobra"},
-]
 
 # ── Mock IMGW weather stations ─────────────────────────────────────────────────
 WEATHER_DATA = _WEATHER = [
@@ -43,8 +36,16 @@ async def get_social_facilities() -> dict:
 
 @router.get("/air-quality")
 async def get_air_quality() -> list[dict]:
-    """Mock GIOŚ PM2.5/PM10 stations. Phase 5 replaces with real API."""
-    return _AIR_QUALITY
+    """GIOŚ air quality stations — live data with fallback to mock."""
+    return await get_air_quality_data()
+
+
+async def get_air_quality_data() -> list[dict]:
+    """Fetch air quality in briefing-compatible format. Used by voice.py too."""
+    plugin = registry.get("air_quality")
+    if isinstance(plugin, GIOSPlugin):
+        return await plugin.get_briefing_data()
+    return [{"source": "mock", **m} for m in _MOCK_FALLBACK]
 
 
 @router.get("/weather")

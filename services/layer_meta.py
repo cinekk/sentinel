@@ -128,6 +128,23 @@ _FIRE_STATION_ATTRS = [
     AttributeMeta("display_type", "Typ obiektu", "string"),
 ]
 
+_AIR_QUALITY_ATTRS = [
+    AttributeMeta("name", "Stacja", "string"),
+    AttributeMeta("overall_index", "Indeks ogólny", "int",
+                  "Wartość indeksu GIOŚ 0-5 (0=bardzo dobry, 5=bardzo zły)", True),
+    AttributeMeta("overall_category", "Kategoria", "string"),
+    AttributeMeta("pm25_index", "PM2.5 indeks", "int", "", True),
+    AttributeMeta("pm25_category", "PM2.5 kategoria", "string"),
+    AttributeMeta("pm10_index", "PM10 indeks", "int", "", True),
+    AttributeMeta("pm10_category", "PM10 kategoria", "string"),
+    AttributeMeta("so2_index", "SO2 indeks", "int", "", True),
+    AttributeMeta("no2_index", "NO2 indeks", "int", "", True),
+    AttributeMeta("o3_index", "O3 indeks", "int", "", True),
+    AttributeMeta("critical_pollutant", "Zanieczyszczenie krytyczne", "string"),
+    AttributeMeta("measurement_time", "Czas pomiaru", "string"),
+    AttributeMeta("source", "Źródło danych", "string"),
+]
+
 _BOUNDARY_ATTRS = [
     AttributeMeta("name", "Nazwa", "string"),
 ]
@@ -179,6 +196,12 @@ LAYER_SCHEMAS: dict[str, LayerSchema] = {
         label="Granica województwa",
         description="Granica woj. lubelskiego i centroidy powiatów",
         attributes=_BOUNDARY_ATTRS,
+    ),
+    "air_quality": LayerSchema(
+        layer_id="air_quality",
+        label="Jakość powietrza (GIOŚ)",
+        description="Stacje GIOŚ — indeks jakości powietrza, PM2.5, PM10, SO2, NO2, O3",
+        attributes=_AIR_QUALITY_ATTRS,
     ),
     "events": LayerSchema(
         layer_id="events",
