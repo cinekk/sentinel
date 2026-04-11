@@ -1,0 +1,230 @@
+"""
+SimulationPlugin — industrial fire scenario with spreading plume.
+
+State is held in-memory (reset on restart is fine for hackathon).
+Threat zone is a directional ellipse growing along the wind vector.
+Each tick emits synthetic PM2.5/PM10 readings and an EventRow.
+"""
+import asyncio
+import math
+import random
+from datetime import datetime, timezone
+
+from database import SessionLocal, EventRow
+from models import SimulationConfig
+from plugins.base import BasePlugin
+from services.spatial import check_intersections
+
+
+_PRESET = SimulationConfig(
+    source_lat=51.4158,
+    source_lon=21.9698,
+    wind_speed_kmh=15.0,
+    wind_direction_deg=45.0,  # NE
+    fire_intensity=1.0,
+    tick_interval_seconds=10,
+)
+
+
+class SimulationPlugin(BasePlugin):
+    layer_id = "simulation_threat"
+    layer_name = "Strefa Zagrożenia (symulacja)"
+    data_type = "threat_zone"
+
+    def __init__(self) -> None:
+        self._running = False
+        self._tick = 0
+        self._config: SimulationConfig = _PRESET
+        self._threat_zone: dict | None = None
+        self._alerts: list[dict] = []
+        self._task: asyncio.Task | None = None
+        self._resources: list[dict] = []  # injected by caller if needed
+
+    # ── Public control ───────────────────────────────────────────────────────
+
+    def start(self, config: SimulationConfig | None = None) -> None:
+        if self._running:
+            return
+        self._config = config or _PRESET
+        self._tick = 0
+        self._threat_zone = None
+        self._alerts = []
+        self._running = True
+        self._task = asyncio.create_task(self._loop())
+
+    def stop(self) -> None:
+        self._running = False
+        if self._task:
+            self._task.cancel()
+            self._task = None
+
+    def reset(self) -> None:
+        self.stop()
+        self._tick = 0
+        self._threat_zone = None
+        self._alerts = []
+
+    @property
+    def running(self) -> bool:
+        return self._running
+
+    @property
+    def tick(self) -> int:
+        return self._tick
+
+    @property
+    def alerts(self) -> list[dict]:
+        return list(self._alerts)
+
+    @property
+    def state(self) -> dict:
+        return {
+            "running": self._running,
+            "tick": self._tick,
+            "config": self._config.model_dump(),
+            "threat_zone": self._threat_zone,
+            "alerts": self._alerts,
+        }
+
+    # ── BasePlugin ───────────────────────────────────────────────────────────
+
+    async def fetch(self) -> dict:
+        """Return current threat zone + synthetic sensor readings as GeoJSON."""
+        features = []
+
+        if self._threat_zone:
+            features.append(self._threat_zone)
+
+        # Add synthetic sensor readings around source
+        if self._running and self._tick > 0:
+            for i in range(5):
+                angle = (i / 5) * 2 * math.pi
+                dist = 0.02 + random.uniform(0, 0.01)
+                lat = self._config.source_lat + dist * math.sin(angle)
+                lon = self._config.source_lon + dist * math.cos(angle)
+                elapsed = self._tick * self._config.tick_interval_seconds
+                pm25 = _pm25_at_distance(dist * 111, elapsed, self._config)
+                features.append({
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                    "properties": {
+                        "type": "sensor",
+                        "pm25": round(pm25, 1),
+                        "pm10": round(pm25 * 1.6, 1),
+                        "tick": self._tick,
+                        "name": f"Czujnik {i+1}",
+                    },
+                })
+
+        self._last_updated = datetime.now(timezone.utc)
+        return {"type": "FeatureCollection", "features": features}
+
+    # ── Tick loop ────────────────────────────────────────────────────────────
+
+    async def _loop(self) -> None:
+        while self._running:
+            await asyncio.sleep(self._config.tick_interval_seconds)
+            if not self._running:
+                break
+            self._tick += 1
+            self._advance()
+            await self._persist_event()
+
+    def _advance(self) -> None:
+        elapsed_hours = (self._tick * self._config.tick_interval_seconds) / 3600.0
+        intensity = self._config.fire_intensity
+
+        # Plume grows along wind direction; minor axis is 40% of major
+        semi_major_km = self._config.wind_speed_kmh * elapsed_hours * intensity + 0.3
+        semi_minor_km = semi_major_km * 0.4
+
+        # Ellipse center drifts downwind from source
+        drift_km = self._config.wind_speed_kmh * elapsed_hours * 0.5
+        bearing_rad = math.radians(self._config.wind_direction_deg)
+        center_lat = self._config.source_lat + (drift_km / 111.0) * math.cos(bearing_rad)
+        center_lon = self._config.source_lon + (drift_km / (111.0 * math.cos(math.radians(self._config.source_lat)))) * math.sin(bearing_rad)
+
+        self._threat_zone = {
+            "type": "Feature",
+            "geometry": _ellipse_polygon(center_lat, center_lon, semi_major_km, semi_minor_km, self._config.wind_direction_deg),
+            "properties": {
+                "type": "threat_zone",
+                "tick": self._tick,
+                "semi_major_km": round(semi_major_km, 2),
+                "semi_minor_km": round(semi_minor_km, 2),
+                "center_lat": center_lat,
+                "center_lon": center_lon,
+                "bearing_deg": self._config.wind_direction_deg,
+                "elapsed_min": round(self._tick * self._config.tick_interval_seconds / 60, 1),
+            },
+        }
+
+        # Spatial check
+        if self._resources:
+            self._alerts = check_intersections(self._threat_zone, self._resources)
+
+    async def _persist_event(self) -> None:
+        elapsed_min = self._tick * self._config.tick_interval_seconds / 60
+        pm25 = _pm25_at_distance(0, self._tick * self._config.tick_interval_seconds, self._config)
+        desc = (
+            f"[SIM tick {self._tick}] Pożar przemysłowy Puławy — "
+            f"czas: {elapsed_min:.0f}min, PM2.5 ~{pm25:.0f} µg/m³"
+        )
+        async with SessionLocal() as session:
+            row = EventRow(
+                latitude=self._config.source_lat,
+                longitude=self._config.source_lon,
+                category="fire",
+                severity=_severity_for_tick(self._tick),
+                status="active",
+                description=desc,
+                source="sensor",
+                model="simulation",
+            )
+            session.add(row)
+            await session.commit()
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _pm25_at_distance(dist_km: float, elapsed_s: float, cfg: SimulationConfig) -> float:
+    """Rough Gaussian plume — higher intensity / more time = higher readings."""
+    base = 300.0 * cfg.fire_intensity * (1 + elapsed_s / 3600)
+    decay = math.exp(-dist_km / (2.0 * cfg.fire_intensity))
+    return max(base * decay, 5.0)
+
+
+def _severity_for_tick(tick: int) -> str:
+    if tick <= 3:
+        return "medium"
+    if tick <= 8:
+        return "high"
+    return "critical"
+
+
+def _ellipse_polygon(
+    center_lat: float, center_lon: float,
+    semi_major_km: float, semi_minor_km: float,
+    bearing_deg: float,
+    n_points: int = 64,
+) -> dict:
+    """Build a GeoJSON Polygon approximating a rotated ellipse."""
+    lat_per_km = 1.0 / 111.0
+    lon_per_km = 1.0 / (111.0 * math.cos(math.radians(center_lat)))
+    angle_rad = math.radians(90.0 - bearing_deg)  # convert bearing to math angle
+
+    coords = []
+    for i in range(n_points + 1):
+        theta = 2 * math.pi * i / n_points
+        # Point on axis-aligned ellipse
+        ex = semi_major_km * math.cos(theta)
+        ey = semi_minor_km * math.sin(theta)
+        # Rotate
+        rx = ex * math.cos(angle_rad) - ey * math.sin(angle_rad)
+        ry = ex * math.sin(angle_rad) + ey * math.cos(angle_rad)
+        coords.append([
+            center_lon + rx * lon_per_km,
+            center_lat + ry * lat_per_km,
+        ])
+
+    return {"type": "Polygon", "coordinates": [coords]}

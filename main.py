@@ -8,8 +8,10 @@ from fastapi.staticfiles import StaticFiles
 from database import init_db
 from plugins import registry
 from plugins.mock_boundary import MockBoundaryPlugin, MockEventsPlugin
+from plugins.simulation import SimulationPlugin
 from routers.events import router as events_router
 from routers.layers import router as layers_router
+from routers.simulation import router as simulation_router
 
 
 @asynccontextmanager
@@ -17,10 +19,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await init_db()
     registry.register(MockBoundaryPlugin())
     registry.register(MockEventsPlugin())
+    registry.register(SimulationPlugin())
     yield
 
 
-app = FastAPI(title="SENTINEL", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="SENTINEL", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,6 +34,7 @@ app.add_middleware(
 
 app.include_router(events_router)
 app.include_router(layers_router)
+app.include_router(simulation_router)
 
 
 @app.get("/api/health")
