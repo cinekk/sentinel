@@ -11,6 +11,7 @@ from plugins.flood_zones import FloodZonesPlugin
 from plugins.mock_boundary import MockBoundaryPlugin, MockEventsPlugin
 from plugins.resources import FireStationsPlugin, HospitalsPlugin, SchoolsPlugin, SocialPlugin
 from plugins.simulation import SimulationPlugin
+from routers.assistant import router as assistant_router
 from routers.crisis import router as crisis_router
 from routers.events import router as events_router
 from routers.fires_compat import router as fires_compat_router
@@ -50,6 +51,7 @@ app.include_router(simulation_router)
 app.include_router(crisis_router)
 app.include_router(fires_compat_router)
 app.include_router(v1_layers_router)
+app.include_router(assistant_router)
 
 
 @app.get("/api/health")

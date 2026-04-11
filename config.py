@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     usemaps_base_url: str = ""
     usemaps_login: str = ""
     usemaps_password: str = ""
+    openrouter_api_key: str = ""
+    openrouter_model: str = "qwen/qwen3-235b-a22b-2507"
 
 
 settings = Settings()

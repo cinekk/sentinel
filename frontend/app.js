@@ -27,6 +27,7 @@ let allEvents = [];
 const layerConfig       = {};  // layer_id → {mainProp, thresholds, popupProps}
 const layerNumericProps = {};  // layer_id → string[]  (numeric property names)
 const layerAllProps     = {};  // layer_id → string[]  (all property names)
+const layerLabelMaps    = {};  // layer_id → {attr_key: "Human Label"}
 
 // ── Layer config persistence ──────────────────────────────────────────────────
 
@@ -117,15 +118,20 @@ function defaultThresholds() {
   ];
 }
 
-function popupHtml(props, allowedKeys) {
+function popupHtml(props, allowedKeys, labelMap) {
   if (!props) return '<div class="popup-title">Brak danych</div>';
   const skip = new Set(['id', 'type']);
+  const labels = labelMap || {};
   const rows = Object.entries(props)
     .filter(([k]) => {
       if (skip.has(k) || props[k] == null || props[k] === '') return false;
       return !allowedKeys?.length || allowedKeys.includes(k);
     })
-    .map(([k, v]) => `<div class="popup-row">${k}<span>${v}</span></div>`)
+    .map(([k, v]) => {
+      const displayKey = labels[k] || k;
+      const displayVal = typeof v === 'boolean' ? (v ? 'Tak' : 'Nie') : v;
+      return `<div class="popup-row">${displayKey}<span>${displayVal}</span></div>`;
+    })
     .join('');
   return `<div class="popup-title">${props.name || props.description || 'Obiekt'}</div>${rows}`;
 }
@@ -218,7 +224,7 @@ async function fetchAndRenderLayer(id) {
       onEachFeature(feature, layer) {
         const cfg     = layerConfig[id] || {};
         const allowed = cfg.popupProps?.length ? cfg.popupProps : null;
-        layer.bindPopup(popupHtml(feature.properties, allowed), { maxWidth: 300 });
+        layer.bindPopup(popupHtml(feature.properties, allowed, layerLabelMaps[id]), { maxWidth: 300 });
         if (feature.properties?.type === 'powiat') {
           layer.on('click', () => filterEventsByPowiat(feature.properties.name));
         }
@@ -302,7 +308,10 @@ function renderConfigPanel(id, panelEl) {
       <div class="cfg-label">Właściwość główna</div>
       <select class="cfg-main-prop">
         <option value="">— brak —</option>
-        ${numericProps.map(p => `<option value="${p}" ${cfg.mainProp === p ? 'selected' : ''}>${p}</option>`).join('')}
+        ${numericProps.map(p => {
+          const lbl = (layerLabelMaps[id] || {})[p] || p;
+          return `<option value="${p}" ${cfg.mainProp === p ? 'selected' : ''}>${lbl}</option>`;
+        }).join('')}
       </select>
     </div>
     ${cfg.mainProp ? `
@@ -327,7 +336,8 @@ function renderConfigPanel(id, panelEl) {
       <div class="cfg-prop-list">
         ${allProps.map(p => {
           const checked = !cfg.popupProps?.length || cfg.popupProps.includes(p) ? 'checked' : '';
-          return `<label class="cfg-prop-check"><input type="checkbox" value="${p}" ${checked}> ${p}</label>`;
+          const lbl = (layerLabelMaps[id] || {})[p] || p;
+          return `<label class="cfg-prop-check"><input type="checkbox" value="${p}" ${checked}> ${lbl}</label>`;
         }).join('')}
       </div>
     </div>
@@ -680,8 +690,140 @@ document.getElementById('btn-clear-events').addEventListener('click', async () =
   document.getElementById('events-count-badge').textContent = '0';
 });
 
+// ── Layer schemas (human-friendly labels) ─────────────────────────────────
+
+async function fetchLayerSchemas() {
+  try {
+    const res = await fetch(`${API}/api/assistant/layer-schemas`);
+    if (!res.ok) return;
+    const schemas = await res.json();
+    for (const s of schemas) {
+      const lmap = {};
+      for (const a of s.attributes || []) lmap[a.key] = a.label;
+      layerLabelMaps[s.layer_id] = lmap;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch layer schemas:', e);
+  }
+}
+
+// ── AI Assistant ──────────────────────────────────────────────────────────
+
+let assistantBusy = false;
+
+function applyViewConfig(cfg) {
+  if (!cfg) return;
+
+  for (const id of (cfg.layers_visible || [])) {
+    layerEnabled[id] = true;
+    const group = layerGroups[id];
+    if (group && !map.hasLayer(group)) group.addTo(map);
+  }
+  for (const id of (cfg.layers_hidden || [])) {
+    layerEnabled[id] = false;
+    const group = layerGroups[id];
+    if (group && map.hasLayer(group)) map.removeLayer(group);
+  }
+
+  for (const [id, attrs] of Object.entries(cfg.popup_attributes || {})) {
+    const existing = layerConfig[id] || { mainProp: null, thresholds: [], popupProps: null };
+    existing.popupProps = attrs;
+    saveLayerConfig(id, existing);
+  }
+
+  const crit = cfg.critical_attribute;
+  if (crit && crit.layer_id && crit.attribute) {
+    const existing = layerConfig[crit.layer_id] || { mainProp: null, thresholds: [], popupProps: null };
+    existing.mainProp = crit.attribute;
+    existing.thresholds = crit.thresholds || defaultThresholds();
+    saveLayerConfig(crit.layer_id, existing);
+    fetchAndRenderLayer(crit.layer_id);
+  }
+
+  document.querySelectorAll('#layer-list input[type="checkbox"]').forEach(cb => {
+    const id = cb.id.replace('toggle-', '');
+    cb.checked = !!layerEnabled[id];
+  });
+
+  for (const id of (cfg.layers_visible || [])) fetchAndRenderLayer(id);
+}
+
+async function sendAssistantQuery(query) {
+  if (assistantBusy || !query.trim()) return;
+  assistantBusy = true;
+
+  const chatMessages = document.getElementById('chat-messages');
+  chatMessages.innerHTML += `<div class="chat-msg user">${escapeHtml(query)}</div>`;
+
+  const indicator = document.createElement('div');
+  indicator.className = 'chat-msg assistant typing';
+  indicator.textContent = 'Analizuję…';
+  chatMessages.appendChild(indicator);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  try {
+    const res = await fetch(`${API}/api/assistant/configure-view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      indicator.textContent = `Błąd: ${err}`;
+      indicator.classList.remove('typing');
+      indicator.classList.add('error');
+      return;
+    }
+
+    const cfg = await res.json();
+    indicator.remove();
+
+    const explanation = cfg.explanation || 'Widok zaktualizowany.';
+    const model = cfg.model || '';
+    const modelTag = model && model !== 'fallback'
+      ? ` <span class="chat-model">${model}</span>` : '';
+    chatMessages.innerHTML +=
+      `<div class="chat-msg assistant">${escapeHtml(explanation)}${modelTag}</div>`;
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    applyViewConfig(cfg);
+  } catch (e) {
+    indicator.textContent = 'Błąd połączenia z asystentem.';
+    indicator.classList.remove('typing');
+    indicator.classList.add('error');
+    console.error('Assistant error:', e);
+  } finally {
+    assistantBusy = false;
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function initChat() {
+  const input = document.getElementById('chat-input');
+  const btn   = document.getElementById('chat-send');
+  if (!input || !btn) return;
+
+  const submit = () => {
+    const q = input.value.trim();
+    if (q) { sendAssistantQuery(q); input.value = ''; }
+  };
+
+  btn.addEventListener('click', submit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+  });
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
+fetchLayerSchemas();
+initChat();
 refresh();
 updateSimState();
 pollAlerts();
