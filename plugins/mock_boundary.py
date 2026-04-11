@@ -1,34 +1,10 @@
+import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from plugins.base import BasePlugin
 
-# Simplified polygon for Lublin voivodeship boundary (WGS84)
-# Key vertices approximating the administrative boundary
-LUBLIN_VOIVODESHIP_COORDS = [
-    [22.0031, 51.9847],
-    [22.3500, 52.0500],
-    [22.7000, 52.0800],
-    [23.0500, 52.0300],
-    [23.3000, 51.9500],
-    [23.6000, 51.8500],
-    [23.9000, 51.7000],
-    [24.1500, 51.5000],
-    [24.1000, 51.2000],
-    [23.9000, 50.9500],
-    [23.6500, 50.7000],
-    [23.4000, 50.4500],
-    [23.1000, 50.3500],
-    [22.8000, 50.3000],
-    [22.5000, 50.3500],
-    [22.2000, 50.4500],
-    [21.8500, 50.5500],
-    [21.5000, 50.7500],
-    [21.3000, 51.0000],
-    [21.4000, 51.3000],
-    [21.5500, 51.6000],
-    [21.7000, 51.8500],
-    [22.0031, 51.9847],
-]
+_BOUNDARY_PATH = Path(__file__).parent.parent / "frontend" / "geojson" / "lublin_voivodeship.geojson"
 
 # Rough powiaty centroids for Lublin voivodeship (name, lon, lat)
 POWIATY = [
@@ -66,28 +42,16 @@ class MockBoundaryPlugin(BasePlugin):
 
     async def fetch(self) -> dict:
         self._last_updated = datetime.now(timezone.utc)
-        features = [
-            {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [LUBLIN_VOIVODESHIP_COORDS],
-                },
-                "properties": {
-                    "name": "Województwo Lubelskie",
-                    "type": "voivodeship",
-                },
-            }
-        ]
+        fc = json.loads(_BOUNDARY_PATH.read_text(encoding="utf-8"))
         for name, lon, lat in POWIATY:
-            features.append(
+            fc["features"].append(
                 {
                     "type": "Feature",
                     "geometry": {"type": "Point", "coordinates": [lon, lat]},
                     "properties": {"name": name, "type": "powiat"},
                 }
             )
-        return {"type": "FeatureCollection", "features": features}
+        return fc
 
 
 class MockEventsPlugin(BasePlugin):
