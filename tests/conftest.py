@@ -3,10 +3,12 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from database import Base, get_db
+import database
+from database import Base, get_db, HospitalRow
 from plugins import registry, PluginRegistry
 from plugins.mock_boundary import MockBoundaryPlugin, MockEventsPlugin
 from plugins.simulation import SimulationPlugin
+from seed_hospitals import HOSPITALS
 
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
@@ -18,8 +20,19 @@ async def db_session():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    original_session_local = database.SessionLocal
+    database.SessionLocal = session_factory
+
+    async with session_factory() as session:
+        for h in HOSPITALS:
+            session.add(HospitalRow(**h))
+        await session.commit()
+
     async with session_factory() as session:
         yield session
+
+    database.SessionLocal = original_session_local
     await engine.dispose()
 
 

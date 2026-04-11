@@ -63,6 +63,30 @@ class ResourceOut(BaseModel):
     facility_type: str | None = None
     school_type: str | None = None
     unit: str | None = None  # PSP / OSP
+    # hospital-specific (NFZ/MZ 3.3)
+    facility_id: str | None = None
+    short_name: str | None = None
+    hospital_type: str | None = None
+    nfz_contract: bool | None = None
+    has_sor: bool | None = None
+    has_pediatric_sor: bool | None = None
+    has_izba_przyjec: bool | None = None
+    sor_throughput_per_day: int | None = None
+    beds_total_physical: int | None = None
+    beds_available_estimate: int | None = None
+    beds_occupied_pct: float | None = None
+    icu_oiom_beds: int | None = None
+    ventilator_capable_beds: int | None = None
+    ecmo_available: bool | None = None
+    dialysis_stations: int | None = None
+    operating_rooms: int | None = None
+    polytrauma_capable: bool | None = None
+    ct_24_7: bool | None = None
+    mri_available: bool | None = None
+    helipad: bool | None = None
+    helipad_type: str | None = None
+    backup_power: bool | None = None
+    specializations: str | None = None
 
 
 class LayerMeta(BaseModel):
