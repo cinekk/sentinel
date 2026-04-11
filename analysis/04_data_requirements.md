@@ -3,6 +3,7 @@
 **Version:** 1.0  
 **Date:** 2026-04-11  
 **Scenario:** ZESTAW D — Environmental Failure (Smog / Industrial Fire)  
+**System:** Geospatial Decision Dashboard for Marszałek Województwa Lubelskiego  
 **Scoring criterion:** Głębokość analizy zależności między zestawami danych, trafność wniosków
 
 ---
@@ -17,7 +18,7 @@
 | API base | `https://api.gios.gov.pl/pjp-api/rest/` |
 | Endpoints | `/station/findAll`, `/sensor/sensors/{stationId}`, `/data/getData/{sensorId}` |
 | Pollutants | PM2.5, PM10, NO₂, SO₂, O₃, CO, Pb, C₆H₆ |
-| Coverage | ~150 stations nationwide; ~8–12 per voivodeship |
+| Coverage | ~150 stations nationwide; **8 stations in Lubelskie** (incl. Lublin-Śródmieście, Puławy-Centrum, Puławy-Azoty, Chełm, Zamość, Biała Podlaska, Kraśnik, Włodawa) |
 | Update frequency | Hourly values; stations report with 1-hour lag |
 | Format | JSON |
 | Gaps / limitations | Low spatial resolution — large areas between stations unmonitored; 1-hour lag means crisis may peak before data confirms it; no push mechanism, must poll |
@@ -30,7 +31,7 @@
 | API base | `https://airapi.airly.eu/v2/` |
 | Endpoints | `/measurements/nearest`, `/measurements/point`, `/installations/nearest` |
 | Pollutants | PM1, PM2.5, PM10, temperature, humidity, pressure |
-| Coverage | ~10,000+ sensors in Poland; significantly denser than GIOŚ, especially in cities |
+| Coverage | ~10,000+ sensors in Poland; **in Lubelskie: dense in Lublin (~40 sensors), moderate in Puławy (~8), sparse in eastern/rural powiatów** |
 | Update frequency | ~5-minute resolution |
 | Format | JSON |
 | Gaps / limitations | Commercial — requires API key; data quality varies (consumer-grade sensors); not legally certified for regulatory thresholds; spatial clustering in cities, sparse in rural/industrial areas |
@@ -45,6 +46,7 @@
 | NWP forecasts | `https://danepubliczne.imgw.pl/datastore/getfiledown/Arch/Telemetria/Meteo/` |
 | Parameters | Wind speed (m/s), wind direction (°), temperature (°C), pressure (hPa), precipitation (mm/h), humidity (%) |
 | Key parameter for plume | **Mixing layer height** (MLH) — determines vertical dispersion; critical for concentration estimates |
+| Lubelskie stations | Lublin-Radawiec (SYNOP), Puławy (climate station), Zamość, Terespol |
 | Update frequency | SYNOP observations: 10-min to hourly; NWP model runs: every 6 hours (00, 06, 12, 18 UTC) |
 | Format | JSON (SYNOP API), CSV/GRIB (NWP model output) |
 | Gaps / limitations | NWP model has 6-hour run latency; mixing layer height not always in public API — may require GRIB decoding; wind at 10m height, not at plume release height |
@@ -56,6 +58,7 @@
 | Provider | Ministerstwo Edukacji Narodowej — Rejestr Szkół i Placówek Oświatowych |
 | Access | Data portal: `https://rspo.gov.pl` — downloadable CSV/API |
 | Fields | School name, type (primary/secondary/kindergarten), address, coordinates, pupil count, RSPO number |
+| Lubelskie scope | **~1,800 schools and educational facilities** across 213 gmin |
 | Update frequency | Annual; significant events (openings/closures) published mid-year |
 | Format | CSV, JSON API |
 | Gaps / limitations | No real-time occupancy (holidays, remote learning days); coordinates require geocoding for older records; contact numbers not always current |
@@ -69,6 +72,7 @@
 | Fields | DPS name, address, type (elderly / disabled / psychiatric), bed count, licensed capacity |
 | Update frequency | Annual licensing cycle |
 | Format | HTML table / manual download; no formal REST API |
+| Lubelskie scope | **~60 DPS facilities** — concentrated in Lublin, Puławy, Chełm, Zamość |
 | Gaps / limitations | No resident mobility/medical classification in public data; current occupancy not published; contact info may be outdated; no machine-readable API — requires scraping or manual entry |
 
 ### 1.6 Sensitive Objects — Hospitals (NFZ/MZ)
@@ -80,6 +84,7 @@
 | Fields | Facility name, address, type, specialty departments, contracted bed counts |
 | Update frequency | Quarterly contract updates; real-time occupancy not publicly available |
 | Format | JSON API |
+| Lubelskie scope | **~35 hospitals**; key facilities: SPZOZ Puławy, COZL Lublin (Centrum Onkologii), SPSK1/SPSK4 Lublin, szpital powiatowy Chełm, Zamość, Biała Podlaska |
 | Gaps / limitations | Contracted beds ≠ available beds (occupancy fluctuates); ICU/specialty bed counts require separate NFZ data sets; real-time capacity requires integration with hospital HIS systems (not public) |
 
 ### 1.7 Transport Resources — GUS/REGON + Contracts
@@ -90,6 +95,7 @@
 | Fields | Company name, NIP, REGON, vehicle count by type, seating capacity |
 | Update frequency | Annual business registration; contract list maintained by voivodeship crisis cell |
 | Format | REGON API (XML/JSON); contract data in internal voivodeship documents |
+| Lubelskie scope | MPK Lublin (buses), PKS Wschód, private carriers; voivodeship transport contracts |
 | Gaps / limitations | REGON shows company existence, not vehicle availability; actual availability requires phone confirmation; no real-time fleet tracking in public data |
 
 ### 1.8 Population Density — GUS Census Grid
@@ -102,6 +108,29 @@
 | Update frequency | Decennial census; estimates updated annually |
 | Format | GeoTIFF / Shapefile / WFS |
 | Gaps / limitations | 1km² resolution misses sub-grid variation; census data 5+ years old; no time-of-day variation (daytime vs. nighttime population) |
+
+### 1.9 Municipal Public Data — BIP Pages (Bonus: Scraping)
+
+| Attribute | Detail |
+|---|---|
+| Provider | 213 gmin + 20 powiatów + 4 miasta na prawach powiatu in Lubelskie — each with its own BIP (Biuletyn Informacji Publicznej) |
+| Access | Individual BIP websites (e.g., `bip.lublin.eu`, `bippulawy.pl`, `umchelm.bip.lubelskie.pl`) |
+| Data types | Budget reports, infrastructure status, environmental reports, council resolutions, staffing data, public procurement |
+| Format | **HTML tables, PDF documents, XLSX files** — no standard format, no API |
+| Update frequency | Varies by gmina — some weekly, some quarterly, some rarely |
+| Gaps / limitations | No standardized structure across gminas; documents often scanned PDFs; requires per-source scraping adapters; data quality and timeliness vary wildly |
+| SENTINEL approach | Scraping module with per-source parsers for priority gminas (Puławy, Lublin, Chełm); extract structured data from HTML/PDF/XLSX; normalize into SENTINEL data model |
+
+### 1.10 Social Media Signals (Bonus: Social Media Agents)
+
+| Attribute | Detail |
+|---|---|
+| Sources | Facebook (public groups: Lublin112, Puławy24, regional groups), X (Twitter), local portals (lublin.eu, kurierlubelski.pl) |
+| Data types | Citizen reports, photos, geolocated posts about incidents, infrastructure damage, environmental concerns |
+| Value | Often **15–30 minutes faster than official channels** — citizens post photos of smoke, flooding, road damage before any agency is notified |
+| Format | Unstructured text + images + geolocation (when available) |
+| SENTINEL approach | Demonstrational module: monitor selected public feeds, classify posts by relevance (AI), extract/infer geolocation, display as pins on map with confidence score |
+| Gaps / limitations | Privacy considerations; geolocation inference is imprecise; signal-to-noise ratio is low; demonstrational scope only |
 
 ---
 
@@ -325,10 +354,19 @@ The ZESTAW D scenario is not primarily a data collection problem — GIOŚ, IMGW
 
 The value created by SENTINEL emerges entirely from cross-dataset dependencies:
 
+**Crisis dependencies (Zestaw D core):**
 - Wind + PM source → plume (neither alone produces a geographic threat boundary)
 - Plume + facility locations → who is at risk (neither alone tells you which schools to close)
 - Facility headcount + transport capacity + plume ETA → shelter vs. evacuate (each dataset alone suggests nothing about the right action)
 - Hospital capacity + evacuation zone + route viability → where to send people (the receiving constraint changes the sending decision)
 - NWP forecast update + active plume → expanded threat to new facilities (invisible without continuous multi-source comparison)
 
-Each dependency chain represents a decision that a manual process makes incorrectly or too slowly. SENTINEL's contribution is not more sensors or better algorithms — it is the **automatic, real-time computation of these dependency chains**, surfaced as a sequenced action list to the one person with the authority and obligation to act.
+**Steady-state dependencies (governance value):**
+- Hospital bed data + population density → healthcare coverage gaps visible on the map
+- Air quality trends + school locations → chronic exposure risk areas for the Marszałek's attention
+- BIP-scraped municipal data + sensor data → discrepancy detection ("gmina reports air is fine, GIOŚ says otherwise")
+- Social media signals + official reports → early warning and verification layer
+
+Each dependency chain represents a decision that a manual process makes incorrectly, too slowly, or not at all. SENTINEL's contribution is the **automatic computation of these dependency chains** — in crisis mode as a sequenced action list for the operator (Tomasz Kowalczyk), in steady-state as an always-ready regional overview for the Marszałek's briefings.
+
+The system is one — the map, the data, the architecture. The difference is which layers are active and how urgently the results are needed.

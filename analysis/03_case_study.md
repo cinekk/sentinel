@@ -10,7 +10,7 @@
 
 On 11 April 2026, a fire broke out in a warehouse storing industrial solvents and agricultural chemicals at the logistics terminal adjacent to Zakłady Azotowe Puławy S.A. Within 90 minutes, PM2.5 at the nearest GIOŚ station (Puławy-Centrum) exceeded 340 µg/m³ — 23x the WHO 24h guideline. A north-northwest wind at 18 km/h drove the plume directly toward a corridor containing three primary schools, a DPS care home, and the District Hospital in Puławy — all within 6 km of the fire origin.
 
-SENTINEL integrated real-time GIOŚ, Airly, and IMGW data with a facility registry to generate a quantified plume projection and ranked action list within 4 minutes of alert. Crisis managers acting without SENTINEL spent 47 minutes in phone-based coordination before arriving at incomplete situational awareness.
+SENTINEL integrated real-time GIOŚ, Airly, and IMGW data with a facility registry to generate a quantified plume projection and ranked action list within 4 minutes of alert. The operator (Dyrektor Departamentu Bezpieczeństwa UMWL) had the full picture on one screen — and could brief the Marszałek immediately. Without SENTINEL, the same team spent 47 minutes in phone-based coordination before arriving at incomplete situational awareness.
 
 ---
 
@@ -47,7 +47,7 @@ SENTINEL integrated real-time GIOŚ, Airly, and IMGW data with a facility regist
 
 SENTINEL output: DPS Puławy will reach PM2.5 >200 µg/m³ in est. 22 min; SP nr 4 in 18 min; hospital in 45 min. 6 MPK buses (360 capacity) available; evacuation would take multiple runs and more time than the shelter window. Recommendation: shelter-in-place schools and DPS immediately, seal hospital HVAC, pre-stage ALS ambulances outside plume.
 
-**T+22 / 07:45** — Colonel Wiśniewski reviews SENTINEL dashboard: live plume cone on map, PM2.5 time series with 1-hour projection, color-coded sensitive object pins, resource panel showing bus availability and hospital bed counts. Issues three decisions in 6 minutes.
+**T+22 / 07:45** — Tomasz Kowalczyk (Dyrektor Departamentu Bezpieczeństwa i Zarządzania Kryzysowego, UMWL) reviews SENTINEL dashboard: live plume cone on map, PM2.5 time series with 1-hour projection, color-coded sensitive object pins, resource panel showing bus availability and hospital bed counts. Calls the Marszałek with a 90-second briefing — the Marszałek sees the same screen on his tablet. Issues three decisions in 6 minutes.
 
 **T+28 / 07:51** — SP nr 4 shelter-in-place: 420 children moved to interior corridors, HVAC closed.
 
@@ -96,7 +96,7 @@ SENTINEL output: DPS Puławy will reach PM2.5 >200 µg/m³ in est. 22 min; SP nr
 
 **With SENTINEL:**
 
-One screen replaced 14 separate phone calls, three browser windows, and a paper map. Left panel: live plume cone on Usemaps map, updated every 5 minutes. Center: three PM2.5 time series with WHO/Polish threshold lines and 1-hour projections. Right: Claude-generated action list with object name, address, headcount, estimated time window, required resource. Bottom: bus count, ambulance positions, hospital bed capacity. Automatic alert on NWP forecast change.
+One screen replaced 14 separate phone calls, three browser windows, and a paper map. Tomasz Kowalczyk saw: left panel — live plume cone on the Lubelskie map, updated every 5 minutes. Center — three PM2.5 time series with WHO/Polish threshold lines and 1-hour projections. Right — Claude-generated action list with object name, address, headcount, estimated time window, required resource. Bottom — bus count (MPK Lublin + PKS), ambulance positions, hospital bed capacity (SPZOZ Puławy, COZL Lublin). Automatic alert on NWP forecast change. The Marszałek, notified at T+22, saw the same dashboard on the conference room 55" screen during his 08:15 briefing — no separate preparation needed.
 
 ---
 
