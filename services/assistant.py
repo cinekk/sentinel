@@ -1,11 +1,10 @@
 """
-AI Assistant service — translates natural-language situational descriptions
-into dashboard view configurations (which layers to show, which attributes
-to display in popups, and which numeric attribute to use for color-coding).
+AI Assistant service — translates natural-language queries into dashboard
+view configurations. Uses json_schema structured output with enum-constrained
+layer IDs so the LLM cannot hallucinate invalid layer names.
 """
 from __future__ import annotations
 
-import json
 import logging
 
 from services.layer_meta import get_all_schemas, LayerSchema
@@ -14,83 +13,50 @@ from services.openrouter import chat_completion
 logger = logging.getLogger(__name__)
 
 
-def _build_layer_catalog(schemas: list[LayerSchema]) -> str:
-    """Build a compact text catalog of layers + attributes for the system prompt."""
-    parts: list[str] = []
-    for s in schemas:
-        if not s.attributes:
-            continue
-        attr_lines = []
-        for a in s.attributes:
-            extra = ""
-            if a.critical_candidate:
-                extra = " [NUMERIC — can be critical_attribute]"
-            desc = f" — {a.description}" if a.description else ""
-            attr_lines.append(f"    - {a.key} ({a.label}, {a.type}){desc}{extra}")
-        attrs_block = "\n".join(attr_lines)
-        parts.append(f"  Layer: {s.layer_id} — \"{s.label}\"\n  Opis: {s.description}\n  Atrybuty:\n{attrs_block}")
-    return "\n\n".join(parts)
+def _build_view_config_schema(layer_ids: list[str]) -> dict:
+    """Build a JSON Schema for ViewConfig with layer IDs as enum."""
+    layer_enum = {"type": "string", "enum": layer_ids}
+    return {
+        "name": "view_config",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "layers_visible": {"type": "array", "items": layer_enum},
+                "layers_hidden": {"type": "array", "items": layer_enum},
+                "popup_attributes": {
+                    "type": "object",
+                    "additionalProperties": {"type": "array", "items": {"type": "string"}},
+                },
+                "critical_attribute_layer_id": {"type": ["string", "null"]},
+                "critical_attribute_key": {"type": ["string", "null"]},
+                "critical_attribute_label": {"type": ["string", "null"]},
+                "explanation": {"type": "string"},
+            },
+            "required": [
+                "layers_visible", "layers_hidden", "popup_attributes",
+                "critical_attribute_layer_id", "critical_attribute_key",
+                "critical_attribute_label", "explanation",
+            ],
+            "additionalProperties": False,
+        },
+    }
 
 
 SYSTEM_PROMPT = """\
-Jesteś asystentem AI platformy SENTINEL — systemu świadomości sytuacyjnej dla województwa lubelskiego.
+Asystent mapy SENTINEL. Wybierz które warstwy pokazać a które ukryć.
 
-Twoim zadaniem jest konfiguracja widoku dashboardu na podstawie opisu sytuacji kryzysowej lub analitycznej od operatora.
+Warstwy: {layer_ids}
 
-## Dostępne warstwy i atrybuty
-
-{layer_catalog}
-
-## Zasady
-
-1. Na podstawie opisu sytuacji wybierz RELEWANTNE warstwy (layers_visible) i ukryj pozostałe (layers_hidden).
-2. Dla każdej widocznej warstwy z atrybutami, wybierz 3-8 NAJWAŻNIEJSZYCH atrybutów do popup_attributes. Zawsze uwzględnij "name".
-3. Jeśli sytuacja wymaga wizualizacji numerycznej (np. dostępne łóżka, pojemność), ustaw critical_attribute z progami kolorów.
-4. Progi (thresholds) to lista obiektów {{"value": <max>, "color": "<hex>"}} posortowana rosnąco. Ostatni próg bez value to kolor domyślny (powyżej najwyższego progu). Kolory: czerwony #ef4444 (krytycznie mało), pomarańczowy #f97316 (mało), zielony #10b981 (ok).
-5. Odpowiadaj WYŁĄCZNIE po polsku.
-6. explanation — krótkie (1-2 zdania) wyjaśnienie dlaczego taki widok.
-
-## Scenariusze referencyjne
-
-- Pożar/HAZMAT: szpitale (łóżka, SOR, OIT), straż, symulacja, granica. Critical: beds_available_estimate lub icu_oiom_beds.
-- Smog/jakość powietrza: symulacja (PM2.5), szkoły, DPS, szpitale. Critical: pm25 lub capacity.
-- Powódź: szpitale, szkoły, DPS, straż, granica. Critical: beds_available_estimate.
-- Codzienny przegląd: szpitale, szkoły, DPS, straż, granica. Bez critical_attribute.
-- Ewakuacja: DPS (pojemność, łóżka), szpitale (łóżka, SOR), straż. Critical: capacity lub beds.
-
-## Format odpowiedzi
-
-Odpowiedz WYŁĄCZNIE prawidłowym JSON:
-{{
-  "layers_visible": ["layer_id", ...],
-  "layers_hidden": ["layer_id", ...],
-  "popup_attributes": {{
-    "layer_id": ["attr_key", ...]
-  }},
-  "critical_attribute": {{
-    "layer_id": "...",
-    "attribute": "...",
-    "thresholds": [
-      {{"value": 10, "color": "#ef4444"}},
-      {{"value": 50, "color": "#f97316"}},
-      {{"color": "#10b981"}}
-    ],
-    "label": "Czytelna nazwa"
-  }},
-  "explanation": "..."
-}}
-
-Jeśli critical_attribute nie jest potrzebny, ustaw null.
+Każda warstwa MUSI być w layers_visible ALBO layers_hidden. Odpowiedz krótko po polsku w explanation.
 """
 
 
 async def configure_view(query: str, crisis_context: str | None = None) -> dict:
-    """
-    Takes a user query describing a situation and returns a ViewConfig dict.
-    """
     schemas = get_all_schemas()
-    catalog = _build_layer_catalog(schemas)
-    system = SYSTEM_PROMPT.format(layer_catalog=catalog)
+    layer_ids = [s.layer_id for s in schemas]
+    system = SYSTEM_PROMPT.format(layer_ids=", ".join(layer_ids))
+    view_schema = _build_view_config_schema(layer_ids)
 
     user_msg = query
     if crisis_context:
@@ -102,7 +68,9 @@ async def configure_view(query: str, crisis_context: str | None = None) -> dict:
     ]
 
     try:
-        result = await chat_completion(messages, temperature=0.2, max_tokens=2048)
+        result = await chat_completion(
+            messages, temperature=0.2, max_tokens=4096, json_schema=view_schema,
+        )
     except Exception:
         logger.exception("OpenRouter call failed, returning fallback config")
         return _fallback_config(query)
@@ -111,7 +79,6 @@ async def configure_view(query: str, crisis_context: str | None = None) -> dict:
 
 
 def _validate_and_normalize(raw: dict, schemas: list[LayerSchema]) -> dict:
-    """Ensure the LLM response has all required fields."""
     all_ids = {s.layer_id for s in schemas}
 
     visible = [lid for lid in raw.get("layers_visible", []) if lid in all_ids]
@@ -126,26 +93,24 @@ def _validate_and_normalize(raw: dict, schemas: list[LayerSchema]) -> dict:
             hidden.append(lid)
 
     popup_attrs: dict[str, list[str]] = {}
-    raw_popups = raw.get("popup_attributes", {})
-    for lid, attrs in raw_popups.items():
+    for lid, attrs in raw.get("popup_attributes", {}).items():
         if lid in all_ids and isinstance(attrs, list):
             popup_attrs[lid] = attrs
 
-    critical = raw.get("critical_attribute")
-    if critical and isinstance(critical, dict):
-        if critical.get("layer_id") not in all_ids:
-            critical = None
-        elif not critical.get("attribute"):
-            critical = None
-        else:
-            if "thresholds" not in critical or not critical["thresholds"]:
-                critical["thresholds"] = [
-                    {"value": 10, "color": "#ef4444"},
-                    {"value": 50, "color": "#f97316"},
-                    {"color": "#10b981"},
-                ]
-
-    model_used = raw.get("_model", "unknown")
+    critical = None
+    crit_layer = raw.get("critical_attribute_layer_id")
+    crit_key = raw.get("critical_attribute_key")
+    if crit_layer and crit_key and crit_layer in all_ids:
+        critical = {
+            "layer_id": crit_layer,
+            "attribute": crit_key,
+            "thresholds": [
+                {"value": 10, "color": "#ef4444"},
+                {"value": 50, "color": "#f97316"},
+                {"color": "#10b981"},
+            ],
+            "label": raw.get("critical_attribute_label") or crit_key,
+        }
 
     return {
         "layers_visible": visible,
@@ -153,16 +118,54 @@ def _validate_and_normalize(raw: dict, schemas: list[LayerSchema]) -> dict:
         "popup_attributes": popup_attrs,
         "critical_attribute": critical,
         "explanation": raw.get("explanation", ""),
-        "model": model_used,
+        "model": raw.get("_model", "unknown"),
     }
 
 
-def _fallback_config(query: str) -> dict:
-    """Return a sensible default when the LLM is unavailable."""
-    q = query.lower()
+_LAYER_KEYWORDS: dict[str, list[str]] = {
+    "hospitals": ["szpital", "hospital", "łóżk", "sor", "oit", "oiom", "lecznic", "medycz"],
+    "schools": ["szkoł", "school", "uczeń", "uczni", "oświat", "edukac"],
+    "social": ["dps", "społeczn", "opiekuńcz", "pomoc", "senior"],
+    "fire_stations": ["straż", "fire", "psp", "osp", "strażak", "pożarn"],
+    "air_quality": ["powietrze", "smog", "pm2.5", "pm10", "gioś", "jakość powietrza"],
+    "simulation_threat": ["symulac", "zagroż", "strefa", "pluma", "dyspersj"],
+    "lublin_boundary": ["granica", "powiat", "województw"],
+    "events": ["zdarzen", "event", "kryzys", "incydent"],
+    "transport_units": ["transport", "karetk", "ambulans", "sanitarn"],
+}
 
-    if any(w in q for w in ("pożar", "fire", "hazmat", "chemi")):
+
+def _fallback_config(query: str) -> dict:
+    q = query.lower()
+    all_ids = set(_LAYER_KEYWORDS.keys())
+
+    hide_mode = any(w in q for w in ("ukryj", "schowaj", "wyłącz", "hide"))
+    show_only = any(w in q for w in ("tylko", "only", "pokaż tylko", "same"))
+
+    matched = [lid for lid, kws in _LAYER_KEYWORDS.items()
+               if any(kw in q for kw in kws)]
+
+    if matched and hide_mode:
+        visible = sorted(all_ids - set(matched))
+        hidden = matched
+    elif matched and show_only:
+        visible = matched + (["lublin_boundary"] if "lublin_boundary" not in matched else [])
+        hidden = sorted(all_ids - set(visible))
+    elif any(w in q for w in ("pożar", "fire", "hazmat", "chemi")):
         visible = ["hospitals", "fire_stations", "simulation_threat", "lublin_boundary"]
+        hidden = sorted(all_ids - set(visible))
+    elif any(w in q for w in ("smog", "powietrze", "pm2.5", "pm10")):
+        visible = ["hospitals", "schools", "social", "air_quality", "lublin_boundary"]
+        hidden = sorted(all_ids - set(visible))
+    elif any(w in q for w in ("powód", "flood", "woda", "rzek")):
+        visible = ["hospitals", "schools", "social", "fire_stations", "lublin_boundary"]
+        hidden = sorted(all_ids - set(visible))
+    else:
+        visible = sorted(all_ids)
+        hidden = []
+
+    critical = None
+    if "hospitals" in visible and any(w in q for w in ("pożar", "fire", "hazmat", "łóżk", "kryzys")):
         critical = {
             "layer_id": "hospitals",
             "attribute": "beds_available_estimate",
@@ -173,16 +176,6 @@ def _fallback_config(query: str) -> dict:
             ],
             "label": "Dostępne łóżka",
         }
-    elif any(w in q for w in ("smog", "powietrze", "pm2.5", "pm10")):
-        visible = ["hospitals", "schools", "social", "simulation_threat", "lublin_boundary"]
-        critical = None
-    else:
-        visible = ["hospitals", "schools", "social", "fire_stations", "lublin_boundary"]
-        critical = None
-
-    all_ids = {"hospitals", "schools", "social", "fire_stations",
-               "lublin_boundary", "events", "simulation_threat"}
-    hidden = [lid for lid in all_ids if lid not in visible]
 
     return {
         "layers_visible": visible,

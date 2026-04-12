@@ -117,8 +117,26 @@ async def get_flood_summary() -> dict:
         },
     ]
 
+    flood_schema = {
+        "name": "flood_summary",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "evacuate": {"type": "array", "items": {"type": "string"}},
+                "at_risk": {"type": "array", "items": {"type": "string"}},
+                "redirect_to": {"type": "array", "items": {"type": "string"}},
+                "narrative": {"type": "string"},
+            },
+            "required": ["evacuate", "at_risk", "redirect_to", "narrative"],
+            "additionalProperties": False,
+        },
+    }
+
     try:
-        result = await chat_completion(messages, max_tokens=512, temperature=0.2)
+        result = await chat_completion(
+            messages, max_tokens=512, temperature=0.2, json_schema=flood_schema,
+        )
     except Exception as exc:
         logger.warning("LLM summary failed: %s", exc)
         result = {
