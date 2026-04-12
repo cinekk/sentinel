@@ -2053,11 +2053,121 @@ function initFloodDashboard() {
 
 }
 
+// ── Evacuation dispatch ───────────────────────────────────────────────────────
+
+const EVAC_PRIORITY_COLOR = {
+  NATYCHMIASTOWE: 'var(--red)',
+  PILNE:          'var(--amber)',
+  PLANOWE:        'var(--blue)',
+};
+
+const EVAC_TYPE_LABEL = {
+  S: 'Specjalistyczny ZRM',
+  N: 'Neonatologiczny',
+  P: 'Podstawowy ZRM',
+  T: 'Transport san.',
+};
+
+const EVAC_CATEGORY_LABEL = {
+  icu:        'OIT / OIOM',
+  ward:       'Oddział ogólny',
+  ambulatory: 'Ambulatoryjni',
+};
+
+function renderEvacUnitRow(unit) {
+  const statusClass = `evac-unit-status--${unit.status}`;
+  const typeLabel   = EVAC_TYPE_LABEL[unit.unit_type] || unit.unit_type;
+  return `
+    <div class="evac-unit-row" title="${escapeHtml(typeLabel)}">
+      <span class="evac-type-badge evac-type-${unit.unit_type}">${unit.unit_type}</span>
+      <span class="evac-unit-status ${statusClass}"></span>
+      <span class="evac-unit-callsign">${escapeHtml(unit.call_sign)}</span>
+      <span class="evac-unit-dist">${unit.distance_km} km</span>
+      <span class="evac-unit-eta">~${unit.eta_minutes} min</span>
+    </div>`;
+}
+
+function renderEvacCard(order) {
+  const prioClass = `evac-priority--${order.priority}`;
+  const transferHtml = order.transfer_target
+    ? `<span class="evac-transfer-target">↪ ${escapeHtml(order.transfer_target)}</span>`
+    : '';
+
+  const patientRows = order.patient_groups.map(g => `
+    <tr>
+      <td>${escapeHtml(EVAC_CATEGORY_LABEL[g.category] || g.category)}</td>
+      <td style="text-align:right">${g.count}</td>
+      <td style="text-align:center"><span class="evac-type-badge evac-type-${g.required_unit_type}">${g.required_unit_type}</span></td>
+      <td style="text-align:right">${g.units_needed} jedn.</td>
+    </tr>`).join('');
+
+  const unitRows = order.assigned_units.slice(0, 8).map(renderEvacUnitRow).join('');
+  const moreUnits = order.assigned_units.length > 8
+    ? `<div class="evac-unit-row" style="color:var(--text-mid)">…+${order.assigned_units.length - 8} więcej</div>` : '';
+
+  const deficitHtml = order.deficit > 0
+    ? `<div class="evac-deficit">⚠ Niedobór: brakuje <strong>${order.deficit}</strong> jednostek</div>` : '';
+
+  return `
+    <div class="evac-card">
+      <div class="evac-card-header">
+        <span class="evac-priority ${prioClass}">${escapeHtml(order.priority)}</span>
+        <span class="evac-hosp-name">${escapeHtml(order.name)}</span>
+        ${transferHtml}
+      </div>
+      <div class="evac-body">
+        <table class="evac-patient-table">
+          <thead><tr>
+            <th>Kategoria</th><th style="text-align:right">Pacjenci</th>
+            <th style="text-align:center">Typ</th><th style="text-align:right">Jedn.</th>
+          </tr></thead>
+          <tbody>${patientRows}</tbody>
+        </table>
+        ${order.assigned_units.length ? `
+        <div>
+          <div class="evac-units-header">Przydzielone jednostki (${order.units_available}/${order.units_needed})</div>
+          <div class="evac-units-list">${unitRows}${moreUnits}</div>
+        </div>` : ''}
+        ${deficitHtml}
+      </div>
+    </div>`;
+}
+
+async function loadEvacuationDispatch() {
+  const el    = document.getElementById('flood-evac-list');
+  const badge = document.getElementById('flood-evac-unit-count');
+  if (!el) return;
+
+  try {
+    const res    = await fetch(`${API}/api/flood/evacuation-dispatch`);
+    const orders = await res.json();
+
+    if (!orders.length) {
+      el.innerHTML = '<div class="empty-state">Brak szpitali wymagających ewakuacji</div>';
+      if (badge) badge.textContent = '';
+      return;
+    }
+
+    el.innerHTML = orders.map(renderEvacCard).join('');
+
+    const totalPatients = orders.reduce((s, o) =>
+      s + o.patient_groups.reduce((ps, g) => ps + g.count, 0), 0);
+    const totalDeficit  = orders.reduce((s, o) => s + o.deficit, 0);
+    if (badge) {
+      badge.textContent = `${orders.length} szp. · ${totalPatients} pac.` +
+        (totalDeficit > 0 ? ` · ⚠ ${totalDeficit} brak` : '');
+    }
+  } catch (e) {
+    console.warn('Evacuation dispatch load failed:', e);
+  }
+}
+
 async function refreshFloodTab() {
   await loadFloodAssessment();
   await loadGauges();
   await loadTransferLines();
   await fetchAndRenderLayer('hospitals-status');
+  await loadEvacuationDispatch();
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
