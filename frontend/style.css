@@ -1623,6 +1623,45 @@ header .subtitle {
   background: #22c55e15;
 }
 
+.flood-tag--amber {
+  color: #f59e0b;
+  border-color: #f59e0b55;
+  background: #f59e0b15;
+}
+
+.flood-transfer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.flood-transfer-label {
+  font-size: .58rem;
+  color: var(--text-mid);
+  margin-right: 2px;
+}
+
+.transfer-animated-line {
+  stroke-dasharray: 8 6;
+  animation: transferFlow 0.9s linear infinite;
+}
+
+@keyframes transferFlow {
+  to { stroke-dashoffset: -14; }
+}
+
+.transfer-tooltip {
+  background: #1e293b;
+  border: 1px solid #f59e0b66;
+  color: #f59e0b;
+  font-size: .7rem;
+  padding: 3px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
 .flood-risk-factors {
   display: flex;
   flex-direction: column;
@@ -1958,3 +1997,138 @@ details[open] .flood-override-summary::before { transform: rotate(90deg); }
 .pm-high { color: var(--amber); }
 .pm-med  { color: #facc15; }
 .pm-ok   { color: var(--green); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TOAST NOTIFICATION SYSTEM
+══════════════════════════════════════════════════════════════════════════════ */
+
+#toast-container {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  width: 316px;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 11px 9px 14px;
+  background: rgba(7, 12, 24, 0.97);
+  border: 1px solid var(--border-mid);
+  border-left: 3px solid var(--blue);
+  border-radius: 4px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 28px rgba(0,0,0,.75), 0 0 0 1px rgba(255,255,255,.03);
+  pointer-events: auto;
+  animation: toast-in .22s cubic-bezier(.22,.68,0,1.2) both;
+  overflow: hidden;
+}
+
+.toast.toast--warning  { border-left-color: var(--amber); }
+.toast.toast--critical { border-left-color: var(--red);   box-shadow: 0 6px 28px rgba(0,0,0,.75), 0 0 14px var(--red-glow); }
+.toast.toast--success  { border-left-color: var(--green); }
+.toast.toast--info     { border-left-color: var(--blue);  }
+
+.toast.toast--out {
+  animation: toast-out .2s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  from { transform: translateX(18px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes toast-out {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(22px); opacity: 0; }
+}
+
+.toast-icon {
+  font-size: .8rem;
+  line-height: 1.5;
+  flex-shrink: 0;
+  opacity: .8;
+}
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  margin-bottom: 3px;
+}
+
+.toast--warning  .toast-title { color: var(--amber); }
+.toast--critical .toast-title { color: var(--red);   }
+.toast--success  .toast-title { color: var(--green); }
+.toast--info     .toast-title { color: var(--blue);  }
+
+.toast-msg {
+  font-size: .72rem;
+  color: var(--text-hi);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: .65rem;
+  cursor: pointer;
+  padding: 1px 3px;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+  border-radius: 2px;
+  transition: color .12s, background .12s;
+}
+
+.toast-close:hover { color: var(--text-hi); background: var(--bg-hover); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   NEW MARKER ANIMATION
+══════════════════════════════════════════════════════════════════════════════ */
+
+.marker-new {
+  animation: marker-pop .5s cubic-bezier(.22,.68,0,1.5), marker-glow-fade 2s ease .4s;
+}
+
+@keyframes marker-pop {
+  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+  55%  { transform: scale(1.35) rotate(4deg); opacity: 1; }
+  75%  { transform: scale(.92) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes marker-glow-fade {
+  0%   { filter: drop-shadow(0 0 8px rgba(255,255,255,.9)) drop-shadow(0 2px 5px rgba(0,0,0,.9)); }
+  100% { filter: drop-shadow(0 2px 5px rgba(0,0,0,.9)); }
+}
+
+/* Critical / high-severity new events: pop + expanding ring */
+.marker-new-ring {
+  animation: marker-pop .5s cubic-bezier(.22,.68,0,1.5), marker-ring 2s ease .4s;
+}
+
+@keyframes marker-ring {
+  0%  { box-shadow: 0 0 0 0   rgba(239,68,68,.9), 0 0 12px rgba(239,68,68,.6); }
+  50% { box-shadow: 0 0 0 22px rgba(239,68,68,0), 0 0 20px rgba(239,68,68,.3); }
+  100%{ box-shadow: 0 0 0 0   rgba(239,68,68,0), 0 0 0   rgba(239,68,68,0);   }
+}
