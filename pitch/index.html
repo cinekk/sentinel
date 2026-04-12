@@ -53,7 +53,65 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     3. DUAL PROBLEM
+     3. SOLUTION OVERVIEW (outcome-first)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Rozwi&aogon;zanie: SENTINEL</h2>
+
+  <div class="highlight-box" style="margin-bottom:0.6em;">
+    <strong>Jedna mapa, wiele warstw, jedna decyzja.</strong>
+    SENTINEL agreguje dane wojew&oacute;dztwa i zamienia je w <strong>rekomendacje operacyjne</strong> w czasie kryzysu &mdash;
+    nie tylko w punkt na mapie.
+  </div>
+
+  <ul>
+    <li><strong>Jedno &zacute;r&oacute;d&lstrok;o prawdy</strong> &mdash; interaktywna mapa z warstwami (szpitale, szko&lstrok;y, &sacute;rodowisko, stra&zdot;, zagro&zdot;enia), filtrowana w czasie rzeczywistym</li>
+    <li><strong>Warstwy w&lstrok;&aogon;czasz jednym klikni&eogon;ciem</strong> &mdash; pe&lstrok;na elastyczno&sacute;&cacute; widoku bez przeskakiwania mi&eogon;dzy portalami</li>
+    <li><strong>Architektura plugin&oacute;w</strong> &mdash; nowe &zacute;r&oacute;d&lstrok;a danych jako osobne modu&lstrok;y, bez przebudowy ca&lstrok;o&sacute;ci</li>
+    <li><strong>Od sygna&lstrok;u do dzia&lstrok;ania</strong> &mdash; krzy&zdot;owanie zbior&oacute;w (np. szpitale + drogi + transport) prowadzi do konkretnej decyzji i planu</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     4. INSIGHT IN PRACTICE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Insight w praktyce</h2>
+
+  <p style="font-size:0.6em; color:var(--text-mid); margin-bottom:0.5em;">
+    Przyk&lstrok;ad: szpital zg&lstrok;asza awari&eogon; zasilania w czasie kryzysu &mdash; generatory nie utrzymuj&aogon; obci&aogon;&zdot;enia.
+  </p>
+
+  <div class="flow" style="flex-direction: column; align-items: stretch; gap: 8px;">
+    <div style="display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap;">
+      <div class="flow-box">Zdarzenie: szpital</div>
+      <span class="flow-arrow">+</span>
+      <div class="flow-box">Warstwa: szpitale w regionie</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-box accent">Ranking miejsc docelowych wg wolnych &lstrok;&oacute;&zdot;ek i profilu pacjent&oacute;w</div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap;">
+      <div class="flow-box">Pozycje ZRM / transport medyczny</div>
+      <span class="flow-arrow">+</span>
+      <div class="flow-box">Drogi i czas dojazdu (ETA)</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-box accent">Przydzia&lstrok; jednostek i szacowany czas ewakuacji</div>
+    </div>
+  </div>
+
+  <ul style="margin-top:0.5em;">
+    <li>System weryfikuje szpitale w zasi&eogon;gu i proponuje <strong>gdzie przekierowa&cacute; pacjent&oacute;w</strong> (dost&eogon;pno&sacute;&cacute; &lstrok;&oacute;&zdot;ek, SOR, specjalizacje)</li>
+    <li>Mo&zdot;e <strong>przypisa&cacute; transport medyczny</strong> z uwzgl&eogon;dnieniem lokalizacji jednostki i czasu dotarcia oraz zako&nacute;czenia transferu</li>
+    <li>Wynik: <strong>plan ewakuacji</strong> zamiast r&eogon;cznego zestawiania telefon&oacute;w i arkuszy</li>
+  </ul>
+
+  <div class="highlight-box crisis" style="margin-top:0.45em; font-size:0.85em;">
+    To nie dashboard danych. <strong>To silnik decyzji.</strong>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     5. DUAL MODES
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Dwa tryby, jeden system</h2>
@@ -88,62 +146,6 @@
   <p style="font-size:0.58em; color:var(--text-mid); text-align:center; margin-top:0.6em;">
     Ta sama mapa &middot; te same warstwy &middot; ta sama architektura &mdash; r&oacute;&zdot;ni si&eogon; tylko aktywowane analizy
   </p>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     4. SOLUTION OVERVIEW
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<section>
-  <h2>Rozwi&aogon;zanie: SENTINEL</h2>
-
-  <ul>
-    <li><strong>Interaktywna mapa GIS</strong> wojew&oacute;dztwa z podzia&lstrok;em na powiaty i gminy</li>
-    <li><strong>Wielowarstwowe nak&lstrok;adki</strong> &mdash; &sacute;rodowisko, szpitale, szko&lstrok;y, DPS, stra&zdot;, zagro&zdot;enia &mdash; do&lstrok;aczane i wy&lstrok;aczane jednym klikni&eogon;ciem</li>
-    <li><strong>Dynamiczne od&sacute;wie&zdot;anie</strong> &mdash; dane z GIO&Sacute; aktualizowane co godzin&eogon;, symulacja co 30 sekund</li>
-    <li><strong>Filtry i selekcja</strong> &mdash; klikni&eogon;cie na powiat/gmin&eogon; filtruje dane</li>
-    <li><strong>Responsywny UI</strong> &mdash; du&zdot;y monitor w sali konferencyjnej lub tablet</li>
-    <li><strong>Dwa scenariusze kryzysowe</strong> &mdash; po&zdot;ar przemys&lstrok;owy i pow&oacute;d&zacute; z kryzysem medycznym</li>
-  </ul>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     5. ARCHITECTURE
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<section>
-  <h2>Architektura</h2>
-
-  <div class="flow">
-    <div class="flow-box">GIO&Sacute; API<br><span style="font-size:0.75em; color:var(--text-dim);">jako&sacute;&cacute; powietrza</span></div>
-    <span class="flow-arrow">&rarr;</span>
-    <div class="flow-box accent">FastAPI<br><span style="font-size:0.75em;">plugin system</span></div>
-    <span class="flow-arrow">&rarr;</span>
-    <div class="flow-box">Leaflet GIS<br><span style="font-size:0.75em; color:var(--text-dim);">frontend</span></div>
-  </div>
-
-  <div class="flow" style="margin-top:6px;">
-    <div class="flow-box">Qwen3 8B<br><span style="font-size:0.75em; color:var(--text-dim);">OpenRouter</span></div>
-    <span class="flow-arrow">&rarr;</span>
-    <div class="flow-box accent">AI Assistant<br><span style="font-size:0.75em;">NL &rarr; ViewConfig</span></div>
-    <span class="flow-arrow">&rarr;</span>
-    <div class="flow-box">Mapa reaguje<br><span style="font-size:0.75em; color:var(--text-dim);">warstwy + filtry</span></div>
-  </div>
-
-  <div class="flow" style="margin-top:6px;">
-    <div class="flow-box">ElevenLabs<br><span style="font-size:0.75em; color:var(--text-dim);">TTS + timestamps</span></div>
-    <span class="flow-arrow">&rarr;</span>
-    <div class="flow-box accent">Voice Briefing<br><span style="font-size:0.75em;">karaoke sync</span></div>
-    <span class="flow-arrow">&rarr;</span>
-    <div class="flow-box">Audio + transkrypcja<br><span style="font-size:0.75em; color:var(--text-dim);">live w UI</span></div>
-  </div>
-
-  <div style="display:flex; gap:12px; margin-top:16px; justify-content:center; flex-wrap:wrap;">
-    <span class="badge badge-amber">Python 3.12</span>
-    <span class="badge badge-amber">FastAPI</span>
-    <span class="badge badge-blue">Leaflet.js</span>
-    <span class="badge badge-green">SQLite async</span>
-    <span class="badge badge-amber">Docker + Caddy</span>
-    <span class="badge badge-green">CI/CD GitHub Actions</span>
-  </div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
@@ -322,7 +324,47 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     10. CASE STUDY: ZESTAW A — FLOOD
+     10. ARCHITECTURE (after value proof)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Architektura</h2>
+
+  <div class="flow">
+    <div class="flow-box">GIO&Sacute; API<br><span style="font-size:0.75em; color:var(--text-dim);">jako&sacute;&cacute; powietrza</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box accent">FastAPI<br><span style="font-size:0.75em;">plugin system</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box">Leaflet GIS<br><span style="font-size:0.75em; color:var(--text-dim);">frontend</span></div>
+  </div>
+
+  <div class="flow" style="margin-top:6px;">
+    <div class="flow-box">Qwen3 8B<br><span style="font-size:0.75em; color:var(--text-dim);">OpenRouter</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box accent">AI Assistant<br><span style="font-size:0.75em;">NL &rarr; ViewConfig</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box">Mapa reaguje<br><span style="font-size:0.75em; color:var(--text-dim);">warstwy + filtry</span></div>
+  </div>
+
+  <div class="flow" style="margin-top:6px;">
+    <div class="flow-box">ElevenLabs<br><span style="font-size:0.75em; color:var(--text-dim);">TTS + timestamps</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box accent">Voice Briefing<br><span style="font-size:0.75em;">karaoke sync</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box">Audio + transkrypcja<br><span style="font-size:0.75em; color:var(--text-dim);">live w UI</span></div>
+  </div>
+
+  <div style="display:flex; gap:12px; margin-top:16px; justify-content:center; flex-wrap:wrap;">
+    <span class="badge badge-amber">Python 3.12</span>
+    <span class="badge badge-amber">FastAPI</span>
+    <span class="badge badge-blue">Leaflet.js</span>
+    <span class="badge badge-green">SQLite async</span>
+    <span class="badge badge-amber">Docker + Caddy</span>
+    <span class="badge badge-green">CI/CD GitHub Actions</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     11. CASE STUDY: ZESTAW A — FLOOD
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Case Study: Kryzys powodziowy</h2>
@@ -359,7 +401,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     11. INFRASTRUKTURA MEDYCZNA
+     12. INFRASTRUKTURA MEDYCZNA
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Infrastruktura medyczna</h2>
@@ -412,7 +454,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     12. ZG&Lstrok;OSZENIA 112
+     13. ZG&Lstrok;OSZENIA 112
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Zg&lstrok;oszenia 112</h2>
@@ -472,7 +514,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     13. DATA DEPENDENCIES
+     14. DATA DEPENDENCIES
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Zale&zdot;no&sacute;ci mi&eogon;dzy danymi</h2>
@@ -512,21 +554,21 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     11. AI ASSISTANT
+     15. AI ASSISTANT
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Asystent AI</h2>
 
   <div class="two-col">
     <div>
-      <h3 style="font-size:0.85em;">Qwen3 8B <span class="badge badge-green">open-weights</span></h3>
+      <h3 style="font-size:0.85em;">Qwen3 235B <span class="badge badge-green">open-weights</span></h3>
       <ul>
-        <li>Model: <code>Qwen3-8B</code></li>
-        <li>8.2B parametr&oacute;w, kontekst 40K</li>
+        <li>Model: <code>Qwen3-235B-A22B-2507</code></li>
+        <li>22B aktywnych parametr&oacute;w (MoE)</li>
         <li>Licencja: <strong>Apache 2.0</strong></li>
         <li>Koszt: ~$0.001 / zapytanie</li>
-        <li>100+ j&eogon;zyk&oacute;w (w tym polski)</li>
-        <li>Szybka odpowied&zacute;: ~1&ndash;3s</li>
+        <li>Najlepszy multilingual benchmark (87.5%)</li>
+        <li>Najni&zdot;szy structured output error rate (0.31%)</li>
       </ul>
     </div>
     <div>
@@ -548,7 +590,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     12. VOICE BRIEFING
+     16. VOICE BRIEFING
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Briefing g&lstrok;osowy</h2>
@@ -596,7 +638,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     13. SCALABILITY
+     17. SCALABILITY
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Skalowalno&sacute;&cacute;</h2>
@@ -640,7 +682,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     14. LIVE DEMO
+     18. LIVE DEMO
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Demo na &zdot;ywo</h2>
@@ -676,7 +718,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     15. END
+     19. END
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section class="end-slide">
   <h1>SENTINEL</h1>
