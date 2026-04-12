@@ -1,0 +1,520 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow:wght@300;400;500;600&display=swap');
+
+/* ── SENTINEL Design Tokens ─────────────────────────────────────────────────── */
+
+:root {
+  --bg-deep:      #04080f;
+  --bg-base:      #070c18;
+  --bg-card:      #0b1426;
+  --bg-lift:      #0f1c35;
+  --bg-hover:     #13223f;
+  --border-dim:   #0d1e32;
+  --border-mid:   #152b45;
+  --border-hi:    #1e3d5e;
+
+  --text-hi:      #e4eef8;
+  --text-mid:     #6e92b4;
+  --text-dim:     #2c4566;
+
+  --amber:        #f59e0b;
+  --amber-glow:   rgba(245,158,11,.18);
+  --amber-border: rgba(245,158,11,.45);
+  --red:          #ef4444;
+  --red-glow:     rgba(239,68,68,.18);
+  --green:        #10b981;
+  --blue:         #3b82f6;
+
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-mono:    'Space Mono', monospace;
+  --font-body:    'Barlow', sans-serif;
+}
+
+/* ── Reveal.js Overrides ────────────────────────────────────────────────────── */
+
+.reveal-viewport {
+  background: var(--bg-deep);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,.008) 3px,
+      rgba(255,255,255,.008) 4px
+    );
+}
+
+.reveal {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 32px;
+  color: var(--text-hi);
+}
+
+.reveal .slides section {
+  text-align: left;
+  padding: 40px 60px;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────────── */
+
+.reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+  font-family: var(--font-display);
+  color: var(--text-hi);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4em;
+  font-weight: 400;
+}
+
+.reveal h1 {
+  font-size: 3.2em;
+  color: var(--amber);
+  text-shadow: 0 0 40px rgba(245,158,11,.25);
+}
+
+.reveal h2 {
+  font-size: 2em;
+  color: var(--amber);
+  border-bottom: 1px solid var(--border-mid);
+  padding-bottom: 0.2em;
+}
+
+.reveal h3 {
+  font-size: 1.3em;
+  color: var(--text-hi);
+}
+
+.reveal p, .reveal li {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 0.72em;
+  line-height: 1.55;
+  color: var(--text-hi);
+}
+
+.reveal .subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.55em;
+  color: var(--text-mid);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.reveal .dim {
+  color: var(--text-dim);
+}
+
+.reveal .mid {
+  color: var(--text-mid);
+}
+
+.reveal strong, .reveal b {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.reveal em {
+  color: var(--text-mid);
+  font-style: italic;
+}
+
+/* ── Lists ──────────────────────────────────────────────────────────────────── */
+
+.reveal ul, .reveal ol {
+  margin-left: 1em;
+}
+
+.reveal ul li {
+  list-style: none;
+  position: relative;
+  padding-left: 1.2em;
+  margin-bottom: 0.35em;
+}
+
+.reveal ul li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--amber);
+  font-size: 0.9em;
+}
+
+.reveal ol li {
+  margin-bottom: 0.35em;
+}
+
+/* ── Links ──────────────────────────────────────────────────────────────────── */
+
+.reveal a {
+  color: var(--amber);
+  text-decoration: none;
+  border-bottom: 1px solid var(--amber-border);
+}
+
+.reveal a:hover {
+  color: var(--text-hi);
+  border-bottom-color: var(--text-hi);
+}
+
+/* ── Code ───────────────────────────────────────────────────────────────────── */
+
+.reveal code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--amber);
+  background: var(--bg-card);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  border: 1px solid var(--border-dim);
+}
+
+.reveal pre {
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  padding: 16px 20px;
+  font-size: 0.48em;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+}
+
+.reveal pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-hi);
+  font-size: 1em;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────────── */
+
+.reveal table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.6em;
+  margin: 0.8em 0;
+}
+
+.reveal table th {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  background: var(--bg-card);
+  border-bottom: 2px solid var(--amber-border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.reveal table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-hi);
+}
+
+.reveal table tr:hover td {
+  background: var(--bg-lift);
+}
+
+/* ── Custom Components ──────────────────────────────────────────────────────── */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 1em 0;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-card .stat-value {
+  font-family: var(--font-display);
+  font-size: 2.2em;
+  color: var(--amber);
+  line-height: 1;
+  display: block;
+}
+
+.stat-card .stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.42em;
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 6px;
+  display: block;
+}
+
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.55em;
+  padding: 2px 10px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  vertical-align: middle;
+}
+
+.badge-amber {
+  background: var(--amber-glow);
+  color: var(--amber);
+  border: 1px solid var(--amber-border);
+}
+
+.badge-red {
+  background: var(--red-glow);
+  color: var(--red);
+  border: 1px solid rgba(239,68,68,.5);
+}
+
+.badge-green {
+  background: rgba(16,185,129,.15);
+  color: var(--green);
+  border: 1px solid rgba(16,185,129,.45);
+}
+
+.badge-blue {
+  background: rgba(59,130,246,.15);
+  color: var(--blue);
+  border: 1px solid rgba(59,130,246,.45);
+}
+
+/* comparison columns */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 0.6em 0;
+}
+
+.compare-col {
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: 8px;
+  padding: 20px 24px;
+}
+
+.compare-col h3 {
+  font-size: 1em;
+  margin-bottom: 0.4em;
+}
+
+.compare-col.bad {
+  border-color: rgba(239,68,68,.3);
+}
+
+.compare-col.good {
+  border-color: rgba(16,185,129,.3);
+}
+
+.compare-col.bad h3 { color: var(--red); }
+.compare-col.good h3 { color: var(--green); }
+
+/* flow / architecture diagrams */
+.flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 1em 0;
+  flex-wrap: wrap;
+}
+
+.flow-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: 0.52em;
+  color: var(--text-hi);
+  text-align: center;
+  min-width: 100px;
+}
+
+.flow-box.accent {
+  border-color: var(--amber-border);
+  color: var(--amber);
+  box-shadow: 0 0 12px var(--amber-glow);
+}
+
+.flow-arrow {
+  color: var(--text-dim);
+  font-size: 1.4em;
+}
+
+/* highlight box */
+.highlight-box {
+  background: var(--bg-card);
+  border-left: 3px solid var(--amber);
+  padding: 16px 20px;
+  margin: 0.6em 0;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.68em;
+  color: var(--text-hi);
+  line-height: 1.5;
+}
+
+.highlight-box.crisis {
+  border-left-color: var(--red);
+}
+
+/* two column layout */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+/* title slide special */
+.title-slide {
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.title-slide h1 {
+  font-size: 5em;
+  margin-bottom: 0;
+  line-height: 1;
+}
+
+.title-slide .subtitle {
+  margin-top: 0.6em;
+  font-size: 0.65em;
+}
+
+.title-slide .team {
+  font-family: var(--font-mono);
+  font-size: 0.45em;
+  color: var(--text-dim);
+  margin-top: 2em;
+  letter-spacing: 0.08em;
+}
+
+/* end slide */
+.end-slide {
+  text-align: center !important;
+}
+
+.end-slide h1 {
+  font-size: 3em;
+}
+
+.end-slide .demo-link {
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  color: var(--amber);
+  margin-top: 0.5em;
+  display: block;
+}
+
+/* pill list for data sources */
+.source-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0.5em 0;
+}
+
+.source-pill {
+  font-family: var(--font-mono);
+  font-size: 0.44em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  color: var(--text-mid);
+}
+
+.source-pill.live {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.source-pill.planned {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+/* timeline */
+.timeline {
+  position: relative;
+  margin: 0.5em 0;
+  padding-left: 20px;
+  border-left: 2px solid var(--border-mid);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 10px;
+  padding-left: 18px;
+  font-size: 0.56em;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber-glow);
+}
+
+.timeline-item.critical::before {
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red-glow);
+}
+
+.timeline-item .t-time {
+  font-family: var(--font-mono);
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.timeline-item.critical .t-time {
+  color: var(--red);
+}
+
+/* progress dots (for navigation) */
+.reveal .progress {
+  color: var(--amber);
+  height: 3px;
+}
+
+.reveal .controls button {
+  color: var(--amber);
+}
+
+/* slide number */
+.reveal .slide-number {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-dim);
+  background: transparent;
+  right: 16px;
+  bottom: 12px;
+}
+
+/* fragment transitions */
+.reveal .fragment {
+  transition: all 0.3s ease;
+}
+
+.reveal .fragment.visible {
+  opacity: 1;
+}
