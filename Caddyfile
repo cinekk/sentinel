@@ -3,6 +3,10 @@ sentinel.xd.ventures {
 		reverse_proxy pitch:80
 	}
 	handle {
-		reverse_proxy app:8000
+		reverse_proxy app:8000 {
+			transport http {
+				read_timeout 120s
+			}
+		}
 	}
 }

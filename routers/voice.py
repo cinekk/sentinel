@@ -45,57 +45,64 @@ async def _load_resource_features() -> list[dict]:
 @router.post("/briefing", response_model=BriefingResponse)
 async def voice_briefing() -> BriefingResponse:
     try:
-        active = store.list_active()
-        sim_plugin   = registry.get("simulation_threat")
-        flood_plugin = registry.get("flood_scenario")
-        flood_state  = flood_plugin.state if flood_plugin else None
-
-        tasks: dict[str, asyncio.Task] = {}
-        if active:
-            tasks["facilities"] = asyncio.create_task(_load_resource_features())
-        tasks["air"] = asyncio.create_task(get_air_quality_data())
-        if flood_state and flood_state.get("running"):
-            from services.flood_assessment import assess_hospitals
-            tasks["flood"] = asyncio.create_task(assess_hospitals())
-
-        results = {k: await v for k, v in tasks.items()}
-
-        affected: list[dict] = []
-        if active and "facilities" in results:
-            affected = facilities_in_zones(active, results["facilities"])
-
-        flood_hospitals: list[dict] = []
-        if "flood" in results:
-            flood_hospitals = [
-                s.model_dump() for s in results["flood"]
-                if s.status in ("evacuate", "at_risk")
-            ]
-
-        ctx = BriefingContext(
-            active_crises=active,
-            affected=affected,
-            sim_state=sim_plugin.state if sim_plugin else None,
-            flood_scenario_state=flood_state,
-            flood_hospitals=flood_hospitals,
-            air_quality=results.get("air", []),
-            weather=WEATHER_DATA,
-        )
-        text = generate_briefing_text(ctx)
-        log.info("Briefing text (%d chars): %s…", len(text), text[:80])
-
-        result = await synthesize_with_timestamps(text)
-
-        return BriefingResponse(
-            audio_base64=result.audio_base64,
-            words=[BriefingWordTiming(word=w.word, start=w.start, end=w.end) for w in result.words],
-            text=text,
-            duration_seconds=result.duration_seconds,
-        )
+        text = await _build_briefing_text()
     except Exception:
-        log.exception("Briefing generation failed — returning text-only fallback")
-        fallback_text = "Briefing niedostępny. System monitoringu aktywny. Koniec briefingu."
-        fake = _fake_briefing(fallback_text)
-        return fake
+        log.exception("Briefing text generation failed")
+        text = "Briefing niedostępny. System monitoringu aktywny. Koniec briefingu."
+
+    log.info("Briefing text (%d chars): %s…", len(text), text[:80])
+
+    try:
+        result = await synthesize_with_timestamps(text)
+    except Exception:
+        log.exception("TTS failed — returning text-only")
+        return _fake_briefing(text)
+
+    return BriefingResponse(
+        audio_base64=result.audio_base64,
+        words=[BriefingWordTiming(word=w.word, start=w.start, end=w.end) for w in result.words],
+        text=text,
+        duration_seconds=result.duration_seconds,
+    )
+
+
+async def _build_briefing_text() -> str:
+    active = store.list_active()
+    sim_plugin   = registry.get("simulation_threat")
+    flood_plugin = registry.get("flood_scenario")
+    flood_state  = flood_plugin.state if flood_plugin else None
+
+    tasks: dict[str, asyncio.Task] = {}
+    if active:
+        tasks["facilities"] = asyncio.create_task(_load_resource_features())
+    tasks["air"] = asyncio.create_task(get_air_quality_data())
+    if flood_state and flood_state.get("running"):
+        from services.flood_assessment import assess_hospitals
+        tasks["flood"] = asyncio.create_task(assess_hospitals())
+
+    results = {k: await v for k, v in tasks.items()}
+
+    affected: list[dict] = []
+    if active and "facilities" in results:
+        affected = facilities_in_zones(active, results["facilities"])
+
+    flood_hospitals: list[dict] = []
+    if "flood" in results:
+        flood_hospitals = [
+            s.model_dump() for s in results["flood"]
+            if s.status in ("evacuate", "at_risk")
+        ]
+
+    ctx = BriefingContext(
+        active_crises=active,
+        affected=affected,
+        sim_state=sim_plugin.state if sim_plugin else None,
+        flood_scenario_state=flood_state,
+        flood_hospitals=flood_hospitals,
+        air_quality=results.get("air", []),
+        weather=WEATHER_DATA,
+    )
+    return generate_briefing_text(ctx)
 
 
 def _fake_briefing(text: str) -> BriefingResponse:
