@@ -1478,3 +1478,320 @@ header .subtitle {
   position: relative;
   z-index: 1;
 }
+
+/* ── Flood tab ───────────────────────────────────────────────────────────────── */
+
+.stab--flood { color: #38bdf8; }
+.stab--flood.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+
+.tab-panel--flood {
+  overflow-y: auto;
+  padding: 0;
+}
+
+.flood-section {
+  border-bottom: 1px solid var(--border-dim);
+  padding: 10px 12px;
+}
+
+.flood-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* Hospital rows */
+
+.flood-hospital-table {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.flood-hosp-row {
+  background: var(--bg-lift);
+  border: 1px solid var(--border-dim);
+  border-radius: 5px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.flood-hosp-row:hover { background: var(--bg-hover); }
+
+.flood-hosp-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.flood-status-badge {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  letter-spacing: .04em;
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--badge-color, #6b7280);
+  border: 1px solid var(--badge-color, #6b7280);
+  background: color-mix(in srgb, var(--badge-color, #6b7280) 12%, transparent);
+  flex-shrink: 0;
+}
+
+.flood-hosp-name {
+  font-size: .7rem;
+  font-weight: 500;
+  color: var(--text-hi);
+  line-height: 1.2;
+}
+
+.flood-hosp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.flood-meta-item {
+  font-size: .6rem;
+  color: var(--text-mid);
+  font-family: var(--font-mono);
+}
+
+.flood-tag {
+  font-size: .55rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  color: var(--text-mid);
+}
+
+.flood-tag--green {
+  color: #22c55e;
+  border-color: #22c55e55;
+  background: #22c55e15;
+}
+
+.flood-risk-factors {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+}
+
+.flood-factor {
+  font-size: .58rem;
+  color: #f59e0b;
+  font-family: var(--font-body);
+  padding-left: 8px;
+  position: relative;
+}
+.flood-factor::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: #f59e0b99;
+}
+
+/* Gauge panel */
+
+.flood-gauge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flood-gauge-row {
+  background: var(--bg-lift);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+.flood-gauge-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+}
+
+.flood-gauge-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.flood-gauge-name {
+  font-size: .65rem;
+  color: var(--text-hi);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flood-gauge-river {
+  font-size: .6rem;
+  color: var(--text-mid);
+  font-family: var(--font-mono);
+}
+
+.flood-gauge-level {
+  font-size: .6rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.flood-gauge-bar-bg {
+  height: 3px;
+  background: var(--border-mid);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.flood-gauge-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .3s;
+}
+
+/* AI summary */
+
+.flood-narrative {
+  font-size: .7rem;
+  color: var(--text-hi);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.flood-ai-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.flood-ai-section { }
+
+.flood-ai-label {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .05em;
+  margin-bottom: 3px;
+}
+
+.flood-ai-ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flood-ai-ul li {
+  font-size: .63rem;
+  color: var(--text-hi);
+  padding-left: 10px;
+  position: relative;
+}
+.flood-ai-ul li::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  color: var(--text-dim);
+}
+
+.flood-status-counts {
+  font-size: .6rem;
+  font-family: var(--font-mono);
+}
+
+/* Override panel */
+
+.flood-override-details {
+  border-radius: 4px;
+}
+
+.flood-override-summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.flood-override-summary::-webkit-details-marker { display: none; }
+.flood-override-summary::before {
+  content: '▸';
+  font-size: .7rem;
+  color: var(--text-dim);
+  transition: transform .15s;
+}
+details[open] .flood-override-summary::before { transform: rotate(90deg); }
+
+.flood-override-body { padding-top: 8px; }
+
+.flood-override-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flood-select {
+  width: 100%;
+  background: var(--bg-lift);
+  border: 1px solid var(--border-mid);
+  color: var(--text-hi);
+  font-size: .65rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-family: var(--font-body);
+}
+
+.flood-override-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.flood-override-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .63rem;
+  color: var(--text-mid);
+  cursor: pointer;
+}
+
+.flood-override-check { gap: 6px; }
+
+.flood-select-sm {
+  background: var(--bg-lift);
+  border: 1px solid var(--border-mid);
+  color: var(--text-hi);
+  font-size: .63rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: var(--font-body);
+}
+
+.flood-input-sm {
+  background: var(--bg-lift);
+  border: 1px solid var(--border-mid);
+  color: var(--text-hi);
+  font-size: .63rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  width: 52px;
+  font-family: var(--font-mono);
+}
+
+/* hospital_status layer type dot */
+.layer-dot.hospital_status { background: #ef4444; }
+/* gauge layer type dot */
+.layer-dot.gauge { background: #38bdf8; }

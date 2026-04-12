@@ -9,24 +9,28 @@ from database import init_db
 from plugins import registry
 from plugins.flood_zones import FloodZonesPlugin
 from plugins.gios import GIOSPlugin
+from plugins.imgw_hydro import IMGWHydroPlugin
 from plugins.mock_boundary import MockBoundaryPlugin, EventsPlugin
-from plugins.resources import FireStationsPlugin, HospitalsPlugin, SchoolsPlugin, SocialPlugin
+from plugins.resources import FireStationsPlugin, HospitalsPlugin, HospitalStatusPlugin, SchoolsPlugin, SocialPlugin
 from plugins.simulation import SimulationPlugin
 from routers.assistant import router as assistant_router
 from routers.crisis import router as crisis_router
 from routers.emergency_calls import router as emergency_router
 from routers.events import router as events_router
 from routers.fires_compat import router as fires_compat_router
+from routers.flood import router as flood_router
 from routers.layers import router as layers_router
 from routers.resources import router as resources_router
 from routers.simulation import router as simulation_router
 from routers.v1_layers import router as v1_layers_router
 from routers.voice import router as voice_router
+from services.flood_zones import load_flood_zones
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await init_db()
+    await load_flood_zones()
     registry.register(MockBoundaryPlugin())
     registry.register(EventsPlugin())
     registry.register(FloodZonesPlugin())
@@ -36,6 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     registry.register(SchoolsPlugin())
     registry.register(FireStationsPlugin())
     registry.register(GIOSPlugin())
+    registry.register(IMGWHydroPlugin())
+    registry.register(HospitalStatusPlugin())
     yield
 
 
@@ -58,6 +64,7 @@ app.include_router(emergency_router)
 app.include_router(v1_layers_router)
 app.include_router(assistant_router)
 app.include_router(voice_router)
+app.include_router(flood_router)
 
 
 @app.get("/api/health")

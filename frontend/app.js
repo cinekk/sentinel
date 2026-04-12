@@ -84,22 +84,26 @@ const RESOURCE_ICON = {
 const BEARING_LABELS = { 0:'N', 45:'NE', 90:'E', 135:'SE', 180:'S', 225:'SW', 270:'W', 315:'NW' };
 
 const LAYER_TYPE_CLASS = {
-  resources:   'resources',
-  events:      'events',
-  boundary:    'boundary',
-  simulation:  'simulation',
-  air_quality: 'air_quality',
-  flood_zone:  'flood_zone',
+  resources:       'resources',
+  events:          'events',
+  boundary:        'boundary',
+  simulation:      'simulation',
+  air_quality:     'air_quality',
+  flood_zone:      'flood_zone',
+  hospital_status: 'hospital_status',
+  gauge:           'gauge',
 };
 
 const LAYER_TYPE_COLOR = {
-  events:      '#ef4444',  // red
-  simulation:  '#f97316',  // orange
-  air_quality: '#10b981',  // emerald
-  resources:   '#a855f7',  // purple (fallback)
-  flood_zone:  '#0ea5e9',  // sky blue
-  boundary:    '#6b7280',  // gray
-  threat_zone: '#f59e0b',  // amber
+  events:          '#ef4444',  // red
+  simulation:      '#f97316',  // orange
+  air_quality:     '#10b981',  // emerald
+  resources:       '#a855f7',  // purple (fallback)
+  flood_zone:      '#0ea5e9',  // sky blue
+  boundary:        '#6b7280',  // gray
+  threat_zone:     '#f59e0b',  // amber
+  hospital_status: '#ef4444',  // rose — flood status
+  gauge:           '#38bdf8',  // light blue — river gauges
 };
 
 // Per-layer overrides (take priority over data_type color above)
@@ -209,6 +213,32 @@ function pointToLayer(feature, latlng, layerId) {
       fillColor: '#1e3d5e',
       fillOpacity: 0.8,
       weight: 1,
+    });
+  }
+
+  // Hospital flood status markers — colored circle with 🏥
+  if (type === 'hospital_status') {
+    const color = feature.properties?.marker_color || '#6b7280';
+    const pulse = feature.properties?.status === 'evacuate';
+    const markerClass = `map-marker-wrap${pulse ? ' marker-pulse' : ''}`;
+    return L.marker(latlng, {
+      icon: L.divIcon({
+        html: `<div class="${markerClass}" style="background:${color}22;border:2px solid ${color};border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:.9rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.9))">🏥</div>`,
+        iconSize: [24, 24], iconAnchor: [12, 12], className: '',
+      }),
+    });
+  }
+
+  // River gauge markers — colored dot
+  if (type === 'gauge') {
+    const color = feature.properties?.marker_color || '#38bdf8';
+    const pulse = feature.properties?.alert_level === 'alarm';
+    const markerClass = `map-marker-wrap${pulse ? ' marker-pulse' : ''}`;
+    return L.marker(latlng, {
+      icon: L.divIcon({
+        html: `<div class="${markerClass}" style="background:${color};border:2px solid ${color}aa;border-radius:50%;width:14px;height:14px;box-shadow:0 0 8px ${color}88"></div>`,
+        iconSize: [14, 14], iconAnchor: [7, 7], className: '',
+      }),
     });
   }
 
@@ -1184,16 +1214,289 @@ document.getElementById('btn-e112-start').addEventListener('click', () => { _e11
 document.getElementById('btn-e112-reset').addEventListener('click', () => { _e112Running = false; }, true);
 document.getElementById('btn-e112-pause').addEventListener('click', () => { _e112Running = !_e112Running; }, true);
 
+// ── Flood Dashboard (Zestaw A) ─────────────────────────────────────────────────
+
+const FLOOD_STATUS_LABEL = { operational: 'Sprawny', at_risk: 'Zagrożony', evacuate: 'Ewakuacja' };
+const FLOOD_STATUS_COLOR = { operational: '#22c55e', at_risk: '#f59e0b', evacuate: '#ef4444' };
+const GAUGE_ALERT_COLOR  = { normal: '#22c55e', warning: '#f59e0b', alarm: '#ef4444', unknown: '#6b7280' };
+const GAUGE_ALERT_LABEL  = { normal: 'Normal', warning: 'Ostrzeżenie', alarm: 'ALARM', unknown: '—' };
+
+let _floodHospitals = [];
+
+async function loadFloodAssessment() {
+  try {
+    const res = await fetch(`${API}/api/flood/assessment`);
+    if (!res.ok) return;
+    _floodHospitals = await res.json();
+    renderHospitalStatusTable(_floodHospitals);
+    updateFloodBadge(_floodHospitals);
+    populateOverrideSelector(_floodHospitals);
+  } catch (e) {
+    console.warn('Flood assessment failed:', e);
+  }
+}
+
+async function loadGauges() {
+  try {
+    const res = await fetch(`${API}/api/layers/gauges/geojson`);
+    if (!res.ok) return;
+    const fc = await res.json();
+    const gauges = (fc.features || []).map(f => ({
+      id: f.properties.id,
+      name: f.properties.station_name,
+      river: f.properties.river,
+      alert_level: f.properties.alert_level,
+      level_cm: f.properties.level_cm,
+      warning_cm: f.properties.warning_cm,
+      alarm_cm: f.properties.alarm_cm,
+      overridden: f.properties.overridden,
+    }));
+    renderGaugePanel(gauges);
+  } catch (e) {
+    console.warn('Gauges load failed:', e);
+  }
+}
+
+async function loadFloodSummary() {
+  const spinner = document.getElementById('flood-summary-spinner');
+  const narrative = document.getElementById('flood-ai-narrative');
+  const lists = document.getElementById('flood-ai-lists');
+  if (spinner) spinner.style.display = '';
+  try {
+    const res = await fetch(`${API}/api/flood/summary`);
+    if (!res.ok) { narrative.textContent = 'Błąd pobierania oceny AI.'; return; }
+    const data = await res.json();
+    narrative.textContent = data.narrative || '—';
+
+    const sections = [
+      { key: 'evacuate',   label: 'Do ewakuacji',       color: '#ef4444' },
+      { key: 'at_risk',    label: 'Zagrożone',           color: '#f59e0b' },
+      { key: 'redirect_to',label: 'Przyjmują pacjentów', color: '#22c55e' },
+    ];
+    lists.innerHTML = sections.map(s => {
+      const items = data[s.key] || [];
+      if (!items.length) return '';
+      return `<div class="flood-ai-section">
+        <div class="flood-ai-label" style="color:${s.color}">${s.label}</div>
+        <ul class="flood-ai-ul">${items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    narrative.textContent = 'Brak połączenia z AI.';
+    console.warn('Flood summary failed:', e);
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+function renderHospitalStatusTable(hospitals) {
+  const el = document.getElementById('flood-hospital-table');
+  const counts = document.getElementById('flood-hosp-counts');
+  if (!el) return;
+
+  const evac = hospitals.filter(h => h.status === 'evacuate').length;
+  const risk = hospitals.filter(h => h.status === 'at_risk').length;
+  const ok   = hospitals.filter(h => h.status === 'operational').length;
+  if (counts) counts.innerHTML =
+    `<span style="color:#ef4444">${evac} ewakuacja</span> · ` +
+    `<span style="color:#f59e0b">${risk} zagrożone</span> · ` +
+    `<span style="color:#22c55e">${ok} sprawne</span>`;
+
+  if (!hospitals.length) { el.innerHTML = '<div class="empty-state">Brak danych</div>'; return; }
+
+  // Sort: evacuate first, then at_risk, then operational; within same status by name
+  const sorted = [...hospitals].sort((a, b) => {
+    const order = { evacuate: 0, at_risk: 1, operational: 2 };
+    const od = (order[a.status] ?? 3) - (order[b.status] ?? 3);
+    return od !== 0 ? od : a.name.localeCompare(b.name, 'pl');
+  });
+
+  el.innerHTML = sorted.map(h => {
+    const color = FLOOD_STATUS_COLOR[h.status] || '#6b7280';
+    const label = FLOOD_STATUS_LABEL[h.status] || h.status;
+    const genIcon = { ok: '⚡', degraded: '⚠️', offline: '🔴' }[h.generator_state] || '';
+    const sorTag = h.sor ? '<span class="flood-tag">SOR</span>' : '';
+    const receiveTag = h.can_receive ? '<span class="flood-tag flood-tag--green">Przyjmuje</span>' : '';
+    const gaugeInfo = h.nearest_gauge_level
+      ? `<span style="color:${GAUGE_ALERT_COLOR[h.nearest_gauge_level] || '#6b7280'};font-size:.65rem">${GAUGE_ALERT_LABEL[h.nearest_gauge_level]}</span>`
+      : '';
+    const factors = (h.risk_factors || []).length
+      ? `<div class="flood-risk-factors">${h.risk_factors.map(f => `<span class="flood-factor">${escapeHtml(f)}</span>`).join('')}</div>`
+      : '';
+    return `
+      <div class="flood-hosp-row" data-lat="${h.lat}" data-lon="${h.lon}" data-id="${h.hospital_id}">
+        <div class="flood-hosp-top">
+          <span class="flood-status-badge" style="--badge-color:${color}">${label}</span>
+          <span class="flood-hosp-name">${escapeHtml(h.name)}</span>
+        </div>
+        <div class="flood-hosp-meta">
+          ${sorTag}${receiveTag}
+          <span class="flood-meta-item">${genIcon} gen: ${h.generator_state}</span>
+          <span class="flood-meta-item">👤 ${h.personnel_pct}%</span>
+          <span class="flood-meta-item">🛏 ${h.beds}</span>
+          ${h.demand_112 ? `<span class="flood-meta-item">🚑 112: ${h.demand_112}</span>` : ''}
+          ${gaugeInfo}
+        </div>
+        ${factors}
+      </div>
+    `;
+  }).join('');
+
+  el.querySelectorAll('.flood-hosp-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const lat = parseFloat(row.dataset.lat);
+      const lon = parseFloat(row.dataset.lon);
+      if (lat && lon) map.setView([lat, lon], 13);
+    });
+  });
+}
+
+function renderGaugePanel(gauges) {
+  const el = document.getElementById('flood-gauge-list');
+  const badge = document.getElementById('flood-gauge-alarm-count');
+  if (!el) return;
+
+  const alarmCount = gauges.filter(g => g.alert_level === 'alarm').length;
+  const warnCount  = gauges.filter(g => g.alert_level === 'warning').length;
+  if (badge) badge.textContent = alarmCount > 0 ? `${alarmCount} alarm` : (warnCount > 0 ? `${warnCount} ostrzeż.` : '—');
+  if (badge) badge.style.background = alarmCount > 0 ? '#ef4444' : (warnCount > 0 ? '#f59e0b' : '#22c55e');
+
+  // Show top 8: alarm first, then warning, then normal
+  const sorted = [...gauges].sort((a, b) => {
+    const order = { alarm: 0, warning: 1, normal: 2, unknown: 3 };
+    return (order[a.alert_level] ?? 4) - (order[b.alert_level] ?? 4);
+  }).slice(0, 8);
+
+  if (!sorted.length) { el.innerHTML = '<div class="empty-state">Brak danych o poziomach rzek</div>'; return; }
+
+  el.innerHTML = sorted.map(g => {
+    const color = GAUGE_ALERT_COLOR[g.alert_level] || '#6b7280';
+    const label = GAUGE_ALERT_LABEL[g.alert_level] || '—';
+    const pct = (g.alarm_cm && g.level_cm != null)
+      ? Math.min(100, Math.round((g.level_cm / g.alarm_cm) * 100))
+      : null;
+    const overTag = g.overridden ? ' <span class="flood-tag" style="color:#f59e0b">[demo]</span>' : '';
+    return `
+      <div class="flood-gauge-row">
+        <div class="flood-gauge-top">
+          <span class="flood-gauge-dot" style="background:${color};box-shadow:0 0 6px ${color}"></span>
+          <span class="flood-gauge-name">${escapeHtml(g.name)}${overTag}</span>
+          <span class="flood-gauge-river">${escapeHtml(g.river)}</span>
+          <span class="flood-gauge-level" style="color:${color}">${label}</span>
+        </div>
+        ${pct != null ? `<div class="flood-gauge-bar-bg"><div class="flood-gauge-bar" style="width:${pct}%;background:${color}"></div></div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function updateFloodBadge(hospitals) {
+  const badge = document.getElementById('flood-evac-badge');
+  if (!badge) return;
+  const evac = hospitals.filter(h => h.status === 'evacuate').length;
+  if (evac > 0) {
+    badge.textContent = evac;
+    badge.style.display = '';
+    badge.style.background = '#ef4444';
+  } else {
+    const risk = hospitals.filter(h => h.status === 'at_risk').length;
+    if (risk > 0) {
+      badge.textContent = risk;
+      badge.style.display = '';
+      badge.style.background = '#f59e0b';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+function populateOverrideSelector(hospitals) {
+  const sel = document.getElementById('flood-override-hospital');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— wybierz szpital —</option>' +
+    hospitals.map(h => `<option value="${h.hospital_id}">${escapeHtml(h.name.substring(0, 50))}</option>`).join('');
+  if (current) sel.value = current;
+}
+
+async function applyHospitalOverride() {
+  const id  = document.getElementById('flood-override-hospital')?.value;
+  const gen = document.getElementById('flood-override-gen')?.value;
+  const pct = parseInt(document.getElementById('flood-override-pct')?.value ?? '85');
+  const road = document.getElementById('flood-override-road')?.checked;
+
+  if (!id) { alert('Wybierz szpital'); return; }
+
+  const btn = document.getElementById('flood-override-apply');
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const res = await fetch(`${API}/api/hospitals/${id}/override`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ generator_state: gen, personnel_pct: pct, road_cut: road }),
+    });
+    if (res.ok) {
+      btn.textContent = 'OK ✓';
+      setTimeout(() => { btn.textContent = 'Zastosuj'; btn.disabled = false; }, 1500);
+      await loadFloodAssessment();
+      await loadFloodSummary();
+    } else {
+      btn.textContent = 'Błąd';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    btn.textContent = 'Błąd';
+    btn.disabled = false;
+    console.error('Override failed:', e);
+  }
+}
+
+function initFloodDashboard() {
+  const refreshBtn = document.getElementById('flood-summary-refresh');
+  if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+    await loadFloodAssessment();
+    await loadGauges();
+    await loadFloodSummary();
+  });
+
+  const applyBtn = document.getElementById('flood-override-apply');
+  if (applyBtn) applyBtn.addEventListener('click', applyHospitalOverride);
+
+  // Activate the hospitals-status and gauges layers when flood tab is opened
+  document.querySelector('.stab[data-tab="flood"]')?.addEventListener('click', () => {
+    ['hospitals-status', 'gauges', 'flood_zones'].forEach(id => {
+      if (!layerEnabled[id]) {
+        layerEnabled[id] = true;
+        const group = layerGroups[id];
+        if (group && !map.hasLayer(group)) group.addTo(map);
+        const cb = document.getElementById(`toggle-${id}`);
+        if (cb) cb.checked = true;
+      }
+    });
+  });
+}
+
+async function refreshFloodTab() {
+  await loadFloodAssessment();
+  await loadGauges();
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 fetchLayerSchemas();
 initChat();
 initBriefing();
+initFloodDashboard();
 refresh();
 updateSimState();
 update112State();
 pollAlerts();
+refreshFloodTab();
+loadFloodSummary();
 setInterval(refresh, 30_000);
 setInterval(updateSimState, 10_000);
 setInterval(update112State, 15_000);
 setInterval(pollAlerts, 5_000);
+setInterval(refreshFloodTab, 60_000);
