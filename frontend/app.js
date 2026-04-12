@@ -454,6 +454,7 @@ function pointToLayer(feature, latlng, layerId) {
 }
 
 async function fetchAndRenderLayer(id) {
+  if (id === 'events') return; // events are managed by renderEventMarkers via refresh()
   try {
     const res = await fetch(`${API}/api/layers/${id}/geojson`);
     if (!res.ok) return;
@@ -623,6 +624,28 @@ function renderLayerPanel(layers) {
         ?.addEventListener('click', e => { e.stopPropagation(); toggleConfigPanel(layer.layer_id); });
     }
   });
+
+  // Enable bulk show/hide buttons once layers are rendered
+  const showAllBtn = document.getElementById('layer-show-all');
+  const hideAllBtn = document.getElementById('layer-hide-all');
+  if (showAllBtn) {
+    showAllBtn.disabled = false;
+    showAllBtn.addEventListener('click', () => {
+      layers.forEach(layer => {
+        const cb = document.getElementById(`toggle-${layer.layer_id}`);
+        if (cb && !cb.checked) cb.click();
+      });
+    });
+  }
+  if (hideAllBtn) {
+    hideAllBtn.disabled = false;
+    hideAllBtn.addEventListener('click', () => {
+      layers.forEach(layer => {
+        const cb = document.getElementById(`toggle-${layer.layer_id}`);
+        if (cb && cb.checked) cb.click();
+      });
+    });
+  }
 }
 
 // ── Layer config panel ────────────────────────────────────────────────────────
@@ -794,8 +817,8 @@ function renderEvents(events) {
       const id  = parseInt(card.dataset.id);
       if (!lat || !lon) return;
       const marker = _eventMarkers.get(id);
-      if (marker && layerGroups['__events__']) {
-        layerGroups['__events__'].zoomToShowLayer(marker, () => marker.openPopup());
+      if (marker && layerGroups['events']) {
+        layerGroups['events'].zoomToShowLayer(marker, () => marker.openPopup());
       } else {
         map.setView([lat, lon], 13);
       }
@@ -848,13 +871,14 @@ function openLayerMarkerPopup(layerId, lat, lon, zoom = 13) {
 }
 
 function renderEventMarkers(events, newIds = new Set()) {
-  if (!layerGroups['__events__']) {
-    layerGroups['__events__'] = L.markerClusterGroup({
+  if (!layerGroups['events']) {
+    layerGroups['events'] = L.markerClusterGroup({
       chunkedLoading: true,
       maxClusterRadius: 50,
       showCoverageOnHover: false,
       iconCreateFunction: makeClusterIconFactory(LAYER_TYPE_COLOR.events),
-    }).addTo(map);
+    });
+    if (layerEnabled['events'] !== false) layerGroups['events'].addTo(map);
   }
 
   // Incremental update: remove stale, add new only (avoids flicker on every poll)
@@ -864,7 +888,7 @@ function renderEventMarkers(events, newIds = new Set()) {
 
   for (const [id, marker] of _eventMarkers) {
     if (!currentIds.has(id)) {
-      layerGroups['__events__'].removeLayer(marker);
+      layerGroups['events'].removeLayer(marker);
       _eventMarkers.delete(id);
     }
   }
@@ -894,7 +918,7 @@ function renderEventMarkers(events, newIds = new Set()) {
         <div class="popup-row">Źródło <span>${ev.source}</span></div>
       `);
 
-    layerGroups['__events__'].addLayer(marker);
+    layerGroups['events'].addLayer(marker);
     _eventMarkers.set(ev.id, marker);
   }
 }
@@ -2047,6 +2071,7 @@ function initFloodDashboard() {
   if (resetBtn) resetBtn.addEventListener('click', async () => {
     await fetch(`${API}/api/flood-scenario/reset`, { method: 'POST' });
     stopFloodSimInterval();
+    DemoController.reset();
     const state = await fetchFloodScenarioState();
     updateFloodSimUI(state);
     await refreshFloodTab();
@@ -2110,7 +2135,7 @@ function renderEvacCard(order) {
     ? `<div class="evac-deficit">⚠ Niedobór: brakuje <strong>${order.deficit}</strong> jednostek</div>` : '';
 
   return `
-    <div class="evac-card">
+    <div class="evac-card" data-lat="${order.lat}" data-lon="${order.lon}" style="cursor:pointer" title="Kliknij, aby zlokalizować szpital na mapie">
       <div class="evac-card-header">
         <span class="evac-priority ${prioClass}">${escapeHtml(order.priority)}</span>
         <span class="evac-hosp-name">${escapeHtml(order.name)}</span>
@@ -2151,6 +2176,14 @@ async function loadEvacuationDispatch() {
 
     el.innerHTML = orders.map(renderEvacCard).join('');
 
+    el.querySelectorAll('.evac-card[data-lat]').forEach(card => {
+      card.addEventListener('click', () => {
+        const lat = parseFloat(card.dataset.lat);
+        const lon = parseFloat(card.dataset.lon);
+        if (lat && lon) openLayerMarkerPopup('hospitals-status', lat, lon, 14);
+      });
+    });
+
     const totalPatients = orders.reduce((s, o) =>
       s + o.patient_groups.reduce((ps, g) => ps + g.count, 0), 0);
     const totalDeficit  = orders.reduce((s, o) => s + o.deficit, 0);
@@ -2176,14 +2209,17 @@ async function refreshFloodTab() {
 const DemoController = (() => {
   const STEPS = [
     // { delay_ms, fn }  — delays are relative to previous step
-    { delay: 0,    fn: '_switchToFlood'   },
-    { delay: 500,  fn: '_startSim'        },
-    { delay: 800,  fn: '_speakAlert1'     },
-    { delay: 1500, fn: '_panMap'          },
-    { delay: 6000, fn: '_calloutGauges'   },
-    { delay: 10000,fn: '_calloutHospitals'},
-    { delay: 10000,fn: '_calloutEvac'     },
-    { delay: 12000,fn: '_finish'          },
+    { delay: 0,    fn: '_switchToFlood'     },
+    { delay: 500,  fn: '_startSim'          },
+    { delay: 800,  fn: '_speakAlert1'       },
+    { delay: 1500, fn: '_panMap'            },
+    { delay: 6000, fn: '_calloutGauges'     },
+    { delay: 9000, fn: '_callout112'        },
+    { delay: 9000, fn: '_calloutHospitals'  },
+    { delay: 9000, fn: '_calloutEvacStatus' },
+    { delay: 8000, fn: '_calloutEvac'       },
+    { delay: 9000, fn: '_calloutPriorities' },
+    { delay: 11000,fn: '_finish'            },
   ];
 
   let _timers = [];
@@ -2214,7 +2250,11 @@ const DemoController = (() => {
   function _highlight(selector) {
     _clearHighlight();
     const el = document.querySelector(selector);
-    if (el) { el.classList.add('demo-highlight'); _highlightEl = el; }
+    if (el) {
+      el.classList.add('demo-highlight');
+      _highlightEl = el;
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
   function _showCallout(label, text) {
@@ -2273,20 +2313,37 @@ const DemoController = (() => {
     },
     _calloutGauges() {
       _highlight('#flood-gauge-list');
-      _showCallout('Rzeki — poziomy alarmowe',
-        'Czujniki IMGW monitorują poziomy wód w czasie rzeczywistym. Kolor czerwony oznacza przekroczenie stanu alarmowego.');
+      _showCallout('Przekroczenie stanu alarmowego rzek',
+        'Czujniki IMGW mierzą poziom wód co godzinę. Gdy poziom przekroczy próg alarmowy — system automatycznie podnosi ocenę ryzyka dla szpitali i obiektów w pobliżu. Czerwony = stan alarmowy aktywny, bezpośrednie zagrożenie dla strefy zalewowej.');
+    },
+    _callout112() {
+      _highlight('#flood-hospital-table');
+      _showCallout('Zgłoszenia 112 — sygnał ryzyka',
+        'Każdy szpital pokazuje liczbę wezwań 112 z okolicy (ikona 🚑). Wzrost liczby zgłoszeń w rejonie szpitala jest sygnałem eskalacji kryzysu i podnosi ocenę ryzyka — może przesądzić o decyzji o ewakuacji nawet bez bezpośredniego zalania.');
     },
     _calloutHospitals() {
       _speak('Wykryto krytyczne zagrożenie. Szpitale w strefie powodzi wymagają natychmiastowej ewakuacji. Uruchamiam procedurę transportu sanitarnego.');
+      const firstEvac = _floodHospitals.find(h => h.status === 'evacuate');
+      if (firstEvac) map.flyTo([firstEvac.lat, firstEvac.lon], 13, { animate: true, duration: 1.5 });
       _highlight('#flood-hospital-table');
-      _showCallout('Status szpitali',
-        'Ocena każdego szpitala na podstawie stref ISOK, poziomów rzek i zdarzeń 112. Czerwony = ewakuacja wymagana.');
+      _showCallout('Status szpitali — algorytm oceny',
+        'Każdy szpital oceniany jest łącznie na 3 kryteriach: (1) położenie w strefach zagrożenia powodziowego ISOK, (2) poziom alarmu na najbliższej rzece, (3) natężenie zgłoszeń 112 w okolicy. Kliknij wiersz szpitala, aby go zlokalizować na mapie.');
+    },
+    _calloutEvacStatus() {
+      _highlight('#flood-hospital-table');
+      _showCallout('ZAGROŻONY ≠ ewakuacja — co znaczy każdy status?',
+        'ZAGROŻONY = szpital w strefie ryzyka, ewakuacja jeszcze NIE zarządzona — trwa monitoring, personel w gotowości. EWAKUACJA = decyzja wydana, pacjenci są aktualnie transportowani. Szpital "Zagrożony" może zostać przeklasyfikowany do "Ewakuacja" przy dalszym wzroście poziomu wód.');
     },
     _calloutEvac() {
       _speak('Inicjuję protokół ewakuacji medycznej. Przydział jednostek transportu sanitarnego w toku. Oczekiwany czas ewakuacji — czterdzieści pięć minut.');
       _highlight('#flood-evac-list');
-      _showCallout('Ewakuacja medyczna',
-        'Panel dowodzenia ewakuacją — przydział jednostek T / P / S / N do każdego szpitala z czasem dojazdu i analizą niedoborów.');
+      _showCallout('Panel dowodzenia ewakuacją',
+        'Każdy szpital z decyzją o ewakuacji otrzymuje przydział jednostek T (transport) / P (podstawowy ZRM) / S (specjalistyczny) / N (neonatologiczny). System pokazuje dostępne jednostki, czas dojazdu i ewentualne niedobory. Kliknij kartę szpitala, aby go zlokalizować na mapie.');
+    },
+    _calloutPriorities() {
+      _highlight('#flood-evac-list');
+      _showCallout('Priorytety ewakuacji — co oznacza PLANOWE?',
+        'NATYCHMIASTOWE = bezpośrednie zagrożenie życia, transport trwa. PILNE = ewakuacja uruchomiona, pierwsze wolne jednostki. PLANOWE = ewakuacja jest zaplanowana i POTWIERDZONA — zostanie wykonana niezwłocznie po zwolnieniu jednostek. Każdy szpital z priorytetem "PLANOWE" BĘDZIE ewakuowany — to kolejność, nie opcja do wyboru.');
     },
     _finish() {
       _clearHighlight();
@@ -2343,7 +2400,11 @@ const DemoController = (() => {
     }
   }
 
-  return { start, skip, showCountdown };
+  function reset() {
+    _clearAll();
+  }
+
+  return { start, skip, showCountdown, reset };
 })();
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

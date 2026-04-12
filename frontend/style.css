@@ -268,8 +268,49 @@ header .subtitle {
 .tab-panel[data-panel="layers"]::-webkit-scrollbar-track { background: transparent; }
 .tab-panel[data-panel="layers"]::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
 
+.layer-panel-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 0;
+}
+
+.layer-bulk-btn {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--border-mid);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  letter-spacing: .04em;
+  padding: 5px 6px;
+  cursor: pointer;
+  transition: color .12s, border-color .12s, opacity .12s;
+}
+
+.layer-bulk-btn:hover:not(:disabled) {
+  color: var(--text-mid);
+  border-color: var(--border-hi);
+}
+
+.layer-bulk-btn--all:hover:not(:disabled) {
+  color: var(--green);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.layer-bulk-btn--none:hover:not(:disabled) {
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.layer-bulk-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 #layer-list {
-  padding: 8px 10px 10px;
+  padding: 6px 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 2px;
