@@ -57,8 +57,8 @@ async def voice_briefing() -> BriefingResponse:
         flood_state     = flood_plugin.state if flood_plugin else None
         flood_hospitals: list[dict] = []
         if flood_state and flood_state.get("running"):
-            from services.flood_assessment import get_assessment
-            statuses = await get_assessment()
+            from services.flood_assessment import assess_hospitals
+            statuses = await assess_hospitals()
             flood_hospitals = [
                 s.model_dump() for s in statuses
                 if s.status in ("evacuate", "at_risk")
