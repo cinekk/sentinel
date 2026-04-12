@@ -92,9 +92,9 @@ async def configure_view(query: str, crisis_context: str | None = None) -> dict:
     catalog = _build_layer_catalog(schemas)
     system = SYSTEM_PROMPT.format(layer_catalog=catalog)
 
-    user_msg = query
+    user_msg = f"/no_think\n{query}"
     if crisis_context:
-        user_msg = f"{query}\n\nAktywny kontekst kryzysowy: {crisis_context}"
+        user_msg = f"/no_think\n{query}\n\nAktywny kontekst kryzysowy: {crisis_context}"
 
     messages = [
         {"role": "system", "content": system},
@@ -157,12 +157,50 @@ def _validate_and_normalize(raw: dict, schemas: list[LayerSchema]) -> dict:
     }
 
 
+_LAYER_KEYWORDS: dict[str, list[str]] = {
+    "hospitals": ["szpital", "hospital", "łóżk", "sor", "oit", "oiom", "lecznic", "medycz"],
+    "schools": ["szkoł", "school", "uczeń", "uczni", "oświat", "edukac"],
+    "social": ["dps", "społeczn", "opiekuńcz", "pomoc", "senior"],
+    "fire_stations": ["straż", "fire", "psp", "osp", "strażak", "pożarn"],
+    "air_quality": ["powietrze", "smog", "pm2.5", "pm10", "gioś", "jakość powietrza"],
+    "simulation_threat": ["symulac", "zagroż", "strefa", "pluma", "dyspersj"],
+    "lublin_boundary": ["granica", "powiat", "województw"],
+    "events": ["zdarzen", "event", "kryzys", "incydent"],
+}
+
+
 def _fallback_config(query: str) -> dict:
     """Return a sensible default when the LLM is unavailable."""
     q = query.lower()
+    all_ids = set(_LAYER_KEYWORDS.keys())
 
-    if any(w in q for w in ("pożar", "fire", "hazmat", "chemi")):
+    hide_mode = any(w in q for w in ("ukryj", "schowaj", "wyłącz", "hide"))
+    show_only = any(w in q for w in ("tylko", "only", "pokaż tylko", "same"))
+
+    matched = [lid for lid, kws in _LAYER_KEYWORDS.items()
+               if any(kw in q for kw in kws)]
+
+    if matched and hide_mode:
+        visible = sorted(all_ids - set(matched))
+        hidden = matched
+    elif matched and show_only:
+        visible = matched + (["lublin_boundary"] if "lublin_boundary" not in matched else [])
+        hidden = sorted(all_ids - set(visible))
+    elif any(w in q for w in ("pożar", "fire", "hazmat", "chemi")):
         visible = ["hospitals", "fire_stations", "simulation_threat", "lublin_boundary"]
+        hidden = sorted(all_ids - set(visible))
+    elif any(w in q for w in ("smog", "powietrze", "pm2.5", "pm10")):
+        visible = ["hospitals", "schools", "social", "air_quality", "lublin_boundary"]
+        hidden = sorted(all_ids - set(visible))
+    elif any(w in q for w in ("powód", "flood", "woda", "rzek")):
+        visible = ["hospitals", "schools", "social", "fire_stations", "lublin_boundary"]
+        hidden = sorted(all_ids - set(visible))
+    else:
+        visible = sorted(all_ids)
+        hidden = []
+
+    critical = None
+    if "hospitals" in visible and any(w in q for w in ("pożar", "fire", "hazmat", "łóżk", "kryzys")):
         critical = {
             "layer_id": "hospitals",
             "attribute": "beds_available_estimate",
@@ -173,16 +211,6 @@ def _fallback_config(query: str) -> dict:
             ],
             "label": "Dostępne łóżka",
         }
-    elif any(w in q for w in ("smog", "powietrze", "pm2.5", "pm10")):
-        visible = ["hospitals", "schools", "social", "simulation_threat", "lublin_boundary"]
-        critical = None
-    else:
-        visible = ["hospitals", "schools", "social", "fire_stations", "lublin_boundary"]
-        critical = None
-
-    all_ids = {"hospitals", "schools", "social", "fire_stations",
-               "lublin_boundary", "events", "simulation_threat"}
-    hidden = [lid for lid in all_ids if lid not in visible]
 
     return {
         "layers_visible": visible,

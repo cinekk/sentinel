@@ -1,7 +1,7 @@
 """
 OpenRouter LLM client for the AI assistant.
 
-Uses open-weights models (default: Qwen3 8B) via the OpenRouter API,
+Uses open-weights models (default: Qwen3 235B-A22B-2507) via the OpenRouter API,
 which is OpenAI-compatible. Supports structured JSON output.
 """
 from __future__ import annotations
@@ -50,7 +50,7 @@ async def chat_completion(
     if json_mode:
         body["response_format"] = {"type": "json_object"}
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
             f"{OPENROUTER_BASE}/chat/completions",
             headers=headers,
