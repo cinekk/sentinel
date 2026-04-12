@@ -24,8 +24,9 @@ function applyTabLayerRules(tab) {
       const cb = document.getElementById(`toggle-${id}`);
       if (cb) cb.checked = true;
       // Restore transfer lines with hospitals-status when leaving flood tab
-      if (id === 'hospitals-status' && _transferLinesLayer && !map.hasLayer(_transferLinesLayer)) {
-        _transferLinesLayer.addTo(map);
+      if (id === 'hospitals-status' && _transferLinesLayer) {
+        const showEvacRoutes = (layerConfig['hospitals-status'] || {}).showEvacRoutes !== false;
+        if (showEvacRoutes && !map.hasLayer(_transferLinesLayer)) _transferLinesLayer.addTo(map);
       }
     });
   });
@@ -55,8 +56,9 @@ function applyTabLayerRules(tab) {
     const cb = document.getElementById(`toggle-${id}`);
     if (cb) cb.checked = true;
     // Transfer lines are coupled to hospitals-status
-    if (id === 'hospitals-status' && _transferLinesLayer && !map.hasLayer(_transferLinesLayer)) {
-      _transferLinesLayer.addTo(map);
+    if (id === 'hospitals-status' && _transferLinesLayer) {
+      const showEvacRoutes = (layerConfig['hospitals-status'] || {}).showEvacRoutes !== false;
+      if (showEvacRoutes && !map.hasLayer(_transferLinesLayer)) _transferLinesLayer.addTo(map);
     }
   });
 }
@@ -104,6 +106,7 @@ let allEvents = [];
 let _knownEventIds         = null;  // null = first load, skip toasts
 let _knownHospitalStatuses = {};    // hospital_id → status string
 let _lastFloodTick         = -1;
+let _renderedLayerIds      = null;  // CSV of layer_ids from last full panel render
 const _eventMarkers        = new Map();  // event id → L.Marker
 
 const layerConfig       = {};  // layer_id → {mainProp, thresholds, popupProps}
@@ -230,7 +233,7 @@ function defaultThresholds() {
 
 function popupHtml(props, allowedKeys, labelMap) {
   if (!props) return '<div class="popup-title">Brak danych</div>';
-  const skip = new Set(['id', 'type']);
+  const skip = new Set(['id', 'type', 'sub_schools', 'sub_count']);
   const labels = labelMap || {};
   const rows = Object.entries(props)
     .filter(([k]) => {
@@ -245,6 +248,98 @@ function popupHtml(props, allowedKeys, labelMap) {
     .join('');
   return `<div class="popup-title">${props.name || props.description || 'Obiekt'}</div>${rows}`;
 }
+
+function hospitalStatusPopupHtml(props, allowedKeys, labelMap) {
+  const base = popupHtml(props, allowedKeys, labelMap);
+  const hid  = props?.id   || '';
+  const name = props?.name || '';
+  const gen  = props?.generator_state || 'ok';
+  const pct  = props?.personnel_pct  ?? 85;
+  return base + `<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1)">
+    <button class="popup-override-btn sim-btn primary"
+      data-hid="${escapeHtml(hid)}"
+      data-name="${escapeHtml(name)}"
+      data-gen="${escapeHtml(gen)}"
+      data-pct="${pct}"
+      style="width:100%;font-size:.65rem;padding:4px 8px">
+      ✏ Override operatora
+    </button>
+  </div>`;
+}
+
+function schoolPopupHtml(props, allowedKeys, labelMap) {
+  const base = popupHtml(props, allowedKeys, labelMap);
+  if (!props?.sub_schools?.length) return base;
+  const items = props.sub_schools
+    .map((s) => `<li>${escapeHtml(s.name)}</li>`)
+    .join('');
+  return `${base}
+    <details style="margin-top:6px;font-size:.75rem;opacity:.8">
+      <summary style="cursor:pointer">+${props.sub_count} szkół w kompleksie</summary>
+      <ul style="margin:4px 0 0 12px;padding:0">${items}</ul>
+    </details>`;
+}
+
+// ── Override modal ────────────────────────────────────────────────────────────
+
+let _overrideHospitalId = null;
+
+function openOverrideModal(hid, name, gen, pct) {
+  _overrideHospitalId = hid;
+  document.getElementById('override-modal-name').textContent = name;
+  document.getElementById('om-gen').value  = gen || 'ok';
+  document.getElementById('om-pct').value  = pct ?? 85;
+  document.getElementById('om-road').checked = false;
+  document.getElementById('override-modal').style.display = 'flex';
+}
+
+function closeOverrideModal() {
+  document.getElementById('override-modal').style.display = 'none';
+  _overrideHospitalId = null;
+}
+
+document.getElementById('override-modal-close').addEventListener('click', closeOverrideModal);
+document.getElementById('override-modal-cancel').addEventListener('click', closeOverrideModal);
+document.getElementById('override-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeOverrideModal();
+});
+
+document.getElementById('override-modal-apply').addEventListener('click', async () => {
+  if (!_overrideHospitalId) return;
+  const gen  = document.getElementById('om-gen').value;
+  const pct  = parseInt(document.getElementById('om-pct').value ?? '85');
+  const road = document.getElementById('om-road').checked;
+  const btn  = document.getElementById('override-modal-apply');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res = await fetch(`${API}/api/hospitals/${_overrideHospitalId}/override`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ generator_state: gen, personnel_pct: pct, road_cut: road }),
+    });
+    if (res.ok) {
+      showToast(`Override zastosowany: ${document.getElementById('override-modal-name').textContent}`, 'success', '🏥 Operator');
+      closeOverrideModal();
+      map.closePopup();
+      await refresh();
+    } else {
+      showToast('Błąd zapisu override', 'warning', '🏥 Operator');
+    }
+  } catch (e) {
+    showToast('Błąd połączenia', 'warning', '🏥 Operator');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Zastosuj';
+  }
+});
+
+// Attach override button handler when any popup opens
+map.on('popupopen', e => {
+  const btn = e.popup.getElement()?.querySelector('.popup-override-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    openOverrideModal(btn.dataset.hid, btn.dataset.name, btn.dataset.gen, +btn.dataset.pct);
+  });
+});
 
 // ── Cluster icon factory ──────────────────────────────────────────────────────
 
@@ -408,7 +503,14 @@ async function fetchAndRenderLayer(id) {
         if (!marker) continue;
         const cfg     = layerConfig[id] || {};
         const allowed = cfg.popupProps?.length ? cfg.popupProps : null;
-        marker.bindPopup(popupHtml(feature.properties, allowed, layerLabelMaps[id]), { maxWidth: 300 });
+        const isHosp  = layerMeta[id]?.data_type === 'hospital_status';
+        const isSchool = feature.properties?.type === 'school';
+        const html    = isHosp
+          ? hospitalStatusPopupHtml(feature.properties, allowed, layerLabelMaps[id])
+          : isSchool
+            ? schoolPopupHtml(feature.properties, allowed, layerLabelMaps[id])
+            : popupHtml(feature.properties, allowed, layerLabelMaps[id]);
+        marker.bindPopup(html, { maxWidth: 300 });
         if (feature.properties?.type === 'powiat') {
           marker.on('click', () => filterEventsByPowiat(feature.properties.name));
         }
@@ -433,7 +535,14 @@ async function fetchAndRenderLayer(id) {
         onEachFeature(feature, layer) {
           const cfg     = layerConfig[id] || {};
           const allowed = cfg.popupProps?.length ? cfg.popupProps : null;
-          layer.bindPopup(popupHtml(feature.properties, allowed, layerLabelMaps[id]), { maxWidth: 300 });
+          const isHosp  = layerMeta[id]?.data_type === 'hospital_status';
+          const isSchool = feature.properties?.type === 'school';
+          const html    = isHosp
+            ? hospitalStatusPopupHtml(feature.properties, allowed, layerLabelMaps[id])
+            : isSchool
+              ? schoolPopupHtml(feature.properties, allowed, layerLabelMaps[id])
+              : popupHtml(feature.properties, allowed, layerLabelMaps[id]);
+          layer.bindPopup(html, { maxWidth: 300 });
           if (feature.properties?.type === 'powiat') {
             layer.on('click', () => filterEventsByPowiat(feature.properties.name));
           }
@@ -459,12 +568,24 @@ function renderLayerPanel(layers) {
 
   if (!layers.length) {
     list.innerHTML = '<div class="empty-state">Brak warstw</div>';
+    _renderedLayerIds = '';
     return;
   }
 
+  // If layers haven't changed, just sync checkbox states — don't nuke open config panels
+  const newKey = layers.map(l => l.layer_id).join(',');
+  if (_renderedLayerIds === newKey) {
+    layers.forEach(l => {
+      const cb = document.getElementById(`toggle-${l.layer_id}`);
+      if (cb) cb.checked = !!layerEnabled[l.layer_id];
+    });
+    return;
+  }
+  _renderedLayerIds = newKey;
+
   list.innerHTML = layers.map(layer => {
     const dotClass  = LAYER_TYPE_CLASS[layer.data_type] || 'boundary';
-    const hasConfig = layer.data_type === 'resources';
+    const hasConfig = layer.data_type === 'resources' || layer.data_type === 'hospital_status';
     return `
       <div class="layer-entry" data-layer-id="${layer.layer_id}">
         <label class="layer-item">
@@ -490,12 +611,13 @@ function renderLayerPanel(layers) {
       }
       // Transfer lines are coupled to the hospitals-status layer
       if (layer.layer_id === 'hospitals-status' && _transferLinesLayer) {
-        if (e.target.checked) { if (!map.hasLayer(_transferLinesLayer)) _transferLinesLayer.addTo(map); }
+        const showEvacRoutes = (layerConfig['hospitals-status'] || {}).showEvacRoutes !== false;
+        if (e.target.checked && showEvacRoutes) { if (!map.hasLayer(_transferLinesLayer)) _transferLinesLayer.addTo(map); }
         else { if (map.hasLayer(_transferLinesLayer)) map.removeLayer(_transferLinesLayer); }
       }
     });
 
-    if (layer.data_type === 'resources') {
+    if (layer.data_type === 'resources' || layer.data_type === 'hospital_status') {
       document.querySelector(`.layer-cfg-btn[data-layer-id="${layer.layer_id}"]`)
         ?.addEventListener('click', e => { e.stopPropagation(); toggleConfigPanel(layer.layer_id); });
     }
@@ -556,6 +678,13 @@ function renderConfigPanel(id, panelEl) {
         }).join('')}
       </div>
     </div>
+    ${id === 'hospitals-status' ? `
+    <div class="cfg-section">
+      <label class="cfg-prop-check">
+        <input type="checkbox" class="cfg-evac-routes" ${cfg.showEvacRoutes !== false ? 'checked' : ''}>
+        Pokaż trasy ewakuacyjne na mapie
+      </label>
+    </div>` : ''}
     <div class="cfg-section">
       <button class="cfg-apply-btn">Zastosuj</button>
     </div>
@@ -598,7 +727,20 @@ function applyConfigPanel(id, panelEl) {
   const checked    = [...panelEl.querySelectorAll('.cfg-prop-list input:checked')].map(el => el.value);
   const popupProps = checked.length === allProps.length ? null : checked;
 
-  saveLayerConfig(id, { mainProp, thresholds, popupProps });
+  const newCfg = { mainProp, thresholds, popupProps };
+  if (id === 'hospitals-status') {
+    newCfg.showEvacRoutes = panelEl.querySelector('.cfg-evac-routes')?.checked ?? true;
+    // Apply evacuation routes visibility immediately
+    if (_transferLinesLayer) {
+      const hostsEnabled = layerEnabled['hospitals-status'] !== false;
+      if (hostsEnabled && newCfg.showEvacRoutes) {
+        if (!map.hasLayer(_transferLinesLayer)) _transferLinesLayer.addTo(map);
+      } else {
+        if (map.hasLayer(_transferLinesLayer)) map.removeLayer(_transferLinesLayer);
+      }
+    }
+  }
+  saveLayerConfig(id, newCfg);
   fetchAndRenderLayer(id);
 
   const btn = panelEl.querySelector('.cfg-apply-btn');
@@ -1567,10 +1709,13 @@ async function loadTransferLines() {
       }
     }
 
-    // Only show if hospitals-status layer is currently active
-    const hostsEnabled = layerEnabled['hospitals-status'] !== false;
-    if (hostsEnabled && !map.hasLayer(_transferLinesLayer)) {
-      _transferLinesLayer.addTo(map);
+    // Only show if hospitals-status layer is currently active and evac routes are enabled in config
+    const hostsEnabled  = layerEnabled['hospitals-status'] !== false;
+    const showEvacRoutes = (layerConfig['hospitals-status'] || {}).showEvacRoutes !== false;
+    if (hostsEnabled && showEvacRoutes) {
+      if (!map.hasLayer(_transferLinesLayer)) _transferLinesLayer.addTo(map);
+    } else {
+      if (map.hasLayer(_transferLinesLayer)) map.removeLayer(_transferLinesLayer);
     }
   } catch (e) {
     console.warn('Transfer lines load failed:', e);
@@ -1598,7 +1743,6 @@ async function loadFloodAssessment() {
 
     renderHospitalStatusTable(_floodHospitals);
     updateFloodBadge(_floodHospitals);
-    populateOverrideSelector(_floodHospitals);
   } catch (e) {
     console.warn('Flood assessment failed:', e);
   }
@@ -1805,48 +1949,6 @@ function updateFloodBadge(hospitals) {
   }
 }
 
-function populateOverrideSelector(hospitals) {
-  const sel = document.getElementById('flood-override-hospital');
-  if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = '<option value="">— wybierz szpital —</option>' +
-    hospitals.map(h => `<option value="${h.hospital_id}">${escapeHtml(h.name.substring(0, 50))}</option>`).join('');
-  if (current) sel.value = current;
-}
-
-async function applyHospitalOverride() {
-  const id  = document.getElementById('flood-override-hospital')?.value;
-  const gen = document.getElementById('flood-override-gen')?.value;
-  const pct = parseInt(document.getElementById('flood-override-pct')?.value ?? '85');
-  const road = document.getElementById('flood-override-road')?.checked;
-
-  if (!id) { alert('Wybierz szpital'); return; }
-
-  const btn = document.getElementById('flood-override-apply');
-  btn.disabled = true;
-  btn.textContent = '…';
-
-  try {
-    const res = await fetch(`${API}/api/hospitals/${id}/override`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ generator_state: gen, personnel_pct: pct, road_cut: road }),
-    });
-    if (res.ok) {
-      btn.textContent = 'OK ✓';
-      setTimeout(() => { btn.textContent = 'Zastosuj'; btn.disabled = false; }, 1500);
-      await loadFloodAssessment();
-      await loadFloodSummary();
-    } else {
-      btn.textContent = 'Błąd';
-      btn.disabled = false;
-    }
-  } catch (e) {
-    btn.textContent = 'Błąd';
-    btn.disabled = false;
-    console.error('Override failed:', e);
-  }
-}
 
 // ── Flood scenario simulation ─────────────────────────────────────────────────
 
@@ -1916,9 +2018,6 @@ function initFloodDashboard() {
     await loadFloodSummary();
   });
 
-  const applyBtn = document.getElementById('flood-override-apply');
-  if (applyBtn) applyBtn.addEventListener('click', applyHospitalOverride);
-
   // Scenario control buttons
   const startBtn = document.getElementById('flood-sim-start');
   if (startBtn) startBtn.addEventListener('click', async () => {
@@ -1958,6 +2057,7 @@ async function refreshFloodTab() {
   await loadFloodAssessment();
   await loadGauges();
   await loadTransferLines();
+  await fetchAndRenderLayer('hospitals-status');
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

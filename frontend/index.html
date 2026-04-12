@@ -40,6 +40,39 @@
       <div class="hud-alerts" id="hud-alert-list"></div>
     </div>
 
+    <!-- Hospital operator override modal -->
+    <div id="override-modal" class="override-modal-backdrop" style="display:none">
+      <div class="override-modal-panel">
+        <div class="override-modal-header">
+          <span class="override-modal-title">🏥 Override operatora</span>
+          <span class="override-modal-name" id="override-modal-name"></span>
+          <button class="override-modal-close" id="override-modal-close">✕</button>
+        </div>
+        <div class="override-modal-body">
+          <label class="override-field-label">
+            Generator
+            <select id="om-gen" class="flood-select-sm">
+              <option value="ok">OK</option>
+              <option value="degraded">Degradacja</option>
+              <option value="offline">Offline</option>
+            </select>
+          </label>
+          <label class="override-field-label">
+            Personel %
+            <input type="number" id="om-pct" class="flood-input-sm" min="0" max="100" value="85" />
+          </label>
+          <label class="override-field-label override-field-check">
+            <input type="checkbox" id="om-road" />
+            Droga odcięta
+          </label>
+        </div>
+        <div class="override-modal-footer">
+          <button id="override-modal-apply" class="sim-btn primary">Zastosuj</button>
+          <button id="override-modal-cancel" class="sim-btn">Anuluj</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Full alert modal -->
     <div id="alert-modal" class="alert-modal-backdrop">
       <div class="alert-modal-panel">
@@ -246,38 +279,6 @@
         </div>
       </div>
 
-      <!-- Operator override panel -->
-      <div class="flood-section">
-        <details class="flood-override-details">
-          <summary class="flood-override-summary section-label">Operator — override</summary>
-          <div class="flood-override-body">
-            <div class="flood-override-form">
-              <select id="flood-override-hospital" class="flood-select">
-                <option value="">— wybierz szpital —</option>
-              </select>
-              <div class="flood-override-fields">
-                <label class="flood-override-label">
-                  Generator
-                  <select id="flood-override-gen" class="flood-select-sm">
-                    <option value="ok">OK</option>
-                    <option value="degraded">Degradacja</option>
-                    <option value="offline">Offline</option>
-                  </select>
-                </label>
-                <label class="flood-override-label">
-                  Personel %
-                  <input type="number" id="flood-override-pct" class="flood-input-sm" min="0" max="100" value="85" />
-                </label>
-                <label class="flood-override-label flood-override-check">
-                  <input type="checkbox" id="flood-override-road" />
-                  Droga odcięta
-                </label>
-              </div>
-              <button id="flood-override-apply" class="sim-btn primary">Zastosuj</button>
-            </div>
-          </div>
-        </details>
-      </div>
 
     </div>
 
