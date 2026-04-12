@@ -17,21 +17,15 @@ logger = logging.getLogger(__name__)
 
 
 def _build_layer_catalog(schemas: list[LayerSchema]) -> str:
-    """Build a compact text catalog of layers + attributes for the system prompt."""
+    """Build a compact catalog — layer IDs, labels, and key popup/critical attributes only."""
     parts: list[str] = []
     for s in schemas:
-        if not s.attributes:
-            continue
-        attr_lines = []
-        for a in s.attributes:
-            extra = ""
-            if a.critical_candidate:
-                extra = " [NUMERIC — can be critical_attribute]"
-            desc = f" — {a.description}" if a.description else ""
-            attr_lines.append(f"    - {a.key} ({a.label}, {a.type}){desc}{extra}")
-        attrs_block = "\n".join(attr_lines)
-        parts.append(f"  Layer: {s.layer_id} — \"{s.label}\"\n  Opis: {s.description}\n  Atrybuty:\n{attrs_block}")
-    return "\n\n".join(parts)
+        critical_attrs = [a.key for a in s.attributes if a.critical_candidate]
+        popup_keys = [a.key for a in s.attributes[:8]]
+        crit_str = f"  critical: {', '.join(critical_attrs)}" if critical_attrs else ""
+        popup_str = f"  popup: {', '.join(popup_keys)}" if popup_keys else ""
+        parts.append(f"- {s.layer_id} ({s.label}){crit_str}{popup_str}")
+    return "\n".join(parts)
 
 
 def _build_view_config_schema(layer_ids: list[str]) -> dict:
@@ -84,29 +78,11 @@ def _build_view_config_schema(layer_ids: list[str]) -> dict:
 
 
 SYSTEM_PROMPT = """\
-Jesteś asystentem AI platformy SENTINEL — systemu świadomości sytuacyjnej dla województwa lubelskiego.
+Asystent mapy SENTINEL. Wybierz które warstwy pokazać a które ukryć.
 
-Twoim zadaniem jest konfiguracja widoku dashboardu na podstawie opisu sytuacji kryzysowej lub analitycznej od operatora.
+Warstwy: {layer_ids}
 
-## Dostępne warstwy i atrybuty
-
-{layer_catalog}
-
-## Zasady
-
-1. Na podstawie opisu sytuacji wybierz RELEWANTNE warstwy (layers_visible) i ukryj pozostałe (layers_hidden). Każda warstwa MUSI być albo w layers_visible albo layers_hidden.
-2. Dla każdej widocznej warstwy z atrybutami, wybierz 3-8 NAJWAŻNIEJSZYCH atrybutów do popup_attributes. Zawsze uwzględnij "name".
-3. Jeśli sytuacja wymaga wizualizacji numerycznej (np. dostępne łóżka, pojemność), ustaw critical_attribute_layer_id, critical_attribute_key i critical_attribute_label. W przeciwnym razie ustaw je na null.
-4. Odpowiadaj WYŁĄCZNIE po polsku w polu explanation.
-5. explanation — krótkie (1-2 zdania) wyjaśnienie dlaczego taki widok.
-
-## Scenariusze referencyjne
-
-- "pokaż tylko szpitale" → layers_visible: ["hospitals"], layers_hidden: wszystkie pozostałe
-- "ukryj szkoły" → layers_hidden: ["schools"], layers_visible: wszystkie pozostałe
-- Pożar/HAZMAT: szpitale, straż, symulacja, granica. Critical: beds_available_estimate.
-- Smog: jakość powietrza, szkoły, DPS, szpitale.
-- Powódź: szpitale, szkoły, DPS, straż, granica.
+Każda warstwa MUSI być w layers_visible ALBO layers_hidden. Odpowiedz krótko po polsku w explanation.
 """
 
 
@@ -115,10 +91,8 @@ async def configure_view(query: str, crisis_context: str | None = None) -> dict:
     Takes a user query describing a situation and returns a ViewConfig dict.
     """
     schemas = get_all_schemas()
-    catalog = _build_layer_catalog(schemas)
-    system = SYSTEM_PROMPT.format(layer_catalog=catalog)
-
     layer_ids = [s.layer_id for s in schemas]
+    system = SYSTEM_PROMPT.format(layer_ids=", ".join(layer_ids))
     view_schema = _build_view_config_schema(layer_ids)
 
     user_msg = query
@@ -132,7 +106,7 @@ async def configure_view(query: str, crisis_context: str | None = None) -> dict:
 
     try:
         result = await chat_completion(
-            messages, temperature=0.2, max_tokens=2048, json_schema=view_schema,
+            messages, temperature=0.2, max_tokens=4096, json_schema=view_schema,
         )
     except Exception:
         logger.exception("OpenRouter call failed, returning fallback config")

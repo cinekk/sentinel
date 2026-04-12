@@ -13,9 +13,11 @@
 | Model | Parametry | Cena (input/output) | JSON output | Polski | Latencja |
 |-------|-----------|---------------------|-------------|--------|----------|
 | **Qwen3 8B** | 8.2B | $0.05/$0.40/M tok | json_schema ✓ | 100+ języków | ~3-7s |
+| Qwen3.5 9B | 9B | $0.05/$0.15/M tok | niestabilny* | 100+ języków | ~10-50s |
 | Qwen3 235B-A22B-2507 | 235B/22B active | $0.07/$0.10/M tok | json_object ✓ | 201 języków | ~2-6s |
 | DeepSeek V3.2 | 671B/37B active | $0.26/$0.38/M tok | 0.51% error | ~30 języków | ~2-4s |
-| Llama 4 Maverick | 400B/17B active | $0.15/$0.60/M tok | brak danych | 200 języków | ~2-3s |
+
+*Qwen3.5 9B: thinking mode zużywa 4000+ tokenów zanim wyemituje content → timeout 60s. Providery (Venice, Together) ignorują `enable_thinking: false` i `chat_template_kwargs`. JSON output niestabilny (incomplete/malformed). Nie nadaje się do produkcji.
 
 **UWAGA:** Qwen3 8B z `response_format: json_object` zwraca `content: null`. Rozwiązanie: `json_schema` (structured output) z enum-constrained layer IDs → model NIE MOŻE wymyślić niepoprawnych nazw warstw.
 
@@ -24,6 +26,7 @@
 - Niski koszt: $0.05/$0.40 per M tokenów
 - `json_schema` z `strict: true` + enum na layer_id → model zwraca TYLKO prawidłowe nazwy warstw
 - Thinking mode (domyślny) — model rozumuje wewnętrznie, zwraca czysty JSON
+- Skompaktowany system prompt (~100 tokenów) → thinking nie zużywa budżetu tokenów
 - Przetestowane: "pokaż tylko szpitale", "ukryj szkoły" → poprawne odpowiedzi ~3-7s
 
 **Fallback:** Keyword-based heurystyka (zaimplementowana w `_fallback_config`) gdy OpenRouter niedostępny.
