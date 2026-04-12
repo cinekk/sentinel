@@ -33,11 +33,6 @@ class FloodScenarioStartRequest(BaseModel):
 async def start_flood_scenario(body: FloodScenarioStartRequest | None = None) -> dict:
     plugin = _get_plugin()
 
-    # Mutual exclusion: stop fire simulation if running
-    fire_plugin = registry.get("simulation_threat")
-    if fire_plugin and fire_plugin.running:
-        fire_plugin.stop()
-
     if plugin.running:
         return {"status": "already_running", "tick": plugin.tick}
 
