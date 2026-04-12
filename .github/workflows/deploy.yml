@@ -1,0 +1,48 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: GITHUB_TOKEN,GITHUB_REPOSITORY,GITHUB_REF_NAME,OPENROUTER_API_KEY,ELEVENLABS_API_KEY
+          script: |
+            REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            if [ ! -d ~/sentinel/.git ]; then
+              git clone -b "$GITHUB_REF_NAME" "$REPO_URL" ~/sentinel
+            fi
+            cd ~/sentinel
+            git remote set-url origin "$REPO_URL"
+            git fetch origin "$GITHUB_REF_NAME"
+            git checkout "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
+            printf '%s\n' \
+              "DATABASE_URL=sqlite+aiosqlite:///./data/sentinel.db" \
+              "OPENROUTER_API_KEY=${OPENROUTER_API_KEY}" \
+              "OPENROUTER_MODEL=qwen/qwen3-235b-a22b-2507" \
+              "ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}" \
+              > .env
+            docker compose build --no-cache
+            docker compose up -d
+
+      - name: Health check
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://sentinel.xd.ventures/api/health || true)
+          if [ "$STATUS" = "200" ]; then
+            echo "Health check passed (HTTP $STATUS)"
+          else
+            echo "::warning::Health check returned HTTP $STATUS (site may still be starting)"
+          fi
