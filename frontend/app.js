@@ -148,10 +148,11 @@ const CATEGORY_ICON = {
 };
 
 const RESOURCE_ICON = {
-  hospital:     '🏥',
-  school:       '🏫',
-  social:       '🏠',
-  fire_station: '🚒',
+  hospital:       '🏥',
+  school:         '🏫',
+  social:         '🏠',
+  fire_station:   '🚒',
+  transport_unit: '🚑',
 };
 
 const BEARING_LABELS = { 0:'N', 45:'NE', 90:'E', 135:'SE', 180:'S', 225:'SW', 270:'W', 315:'NW' };

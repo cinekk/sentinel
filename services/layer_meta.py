@@ -215,6 +215,16 @@ LAYER_SCHEMAS: dict[str, LayerSchema] = {
         description="Symulowana strefa zagrożenia chemicznego — pluma, czujniki PM2.5/PM10",
         attributes=_SIMULATION_ATTRS,
     ),
+    "transport_units": LayerSchema(
+        layer_id="transport_units",
+        label="Transport Sanitarny",
+        description="Jednostki transportu sanitarnego (T/N/P/S) — lokalizacje i dostępność",
+        attributes=[
+            AttributeMeta("unit_type",       "Typ jednostki",  "string"),
+            AttributeMeta("unit_type_label", "Nazwa typu",     "string"),
+            AttributeMeta("status_label",    "Status",         "string"),
+        ],
+    ),
 }
 
 

@@ -316,3 +316,61 @@ class HospitalStatusPlugin(BasePlugin):
             })
 
         return {"type": "FeatureCollection", "features": features}
+
+
+_UNIT_TYPE_LABELS = {
+    "S": "Specjalistyczny ZRM",
+    "N": "Neonatologiczny",
+    "P": "Podstawowy ZRM",
+    "T": "Transport sanitarny",
+}
+
+_UNIT_TYPE_COLORS = {
+    "S": "#ef4444",
+    "N": "#a855f7",
+    "P": "#f59e0b",
+    "T": "#6e92b4",
+}
+
+
+class TransportUnitsPlugin(BasePlugin):
+    """
+    Map layer showing all available transport sanitarny units
+    (T / N / P / S) generated from hospital base locations.
+    Uses the same deterministic pool as the evacuation dispatch service.
+    """
+    layer_id = "transport_units"
+    layer_name = "Transport Sanitarny"
+    data_type = "resources"
+
+    async def fetch(self) -> dict:
+        from services.evacuation import generate_unit_pool
+
+        async with SessionLocal() as session:
+            result = await session.execute(select(HospitalRow))
+            rows = result.scalars().all()
+
+        bases = [
+            {"lat": r.latitude, "lon": r.longitude, "sor": bool(r.has_sor)}
+            for r in rows
+        ]
+        pool = generate_unit_pool(bases)
+
+        features = []
+        for u in pool:
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [u["lon"], u["lat"]]},
+                "properties": {
+                    "id": u["unit_id"],
+                    "name": u["call_sign"],
+                    "type": "transport_unit",
+                    "unit_type": u["unit_type"],
+                    "unit_type_label": _UNIT_TYPE_LABELS.get(u["unit_type"], u["unit_type"]),
+                    "status": u["status"],
+                    "status_label": "Dostępna" if u["status"] == "available" else "Niedostępna",
+                    "color": _UNIT_TYPE_COLORS.get(u["unit_type"], "#6e92b4"),
+                },
+            })
+
+        return {"type": "FeatureCollection", "features": features}
