@@ -8,24 +8,22 @@
 
 ## 1. Wybór modelu (open-weights)
 
-### Rekomendacja: Qwen3 235B-A22B Instruct 2507 via OpenRouter
+### Rekomendacja: Qwen3 8B via OpenRouter
 
 | Model | Parametry | Cena (input/output) | JSON output | Polski | Latencja |
 |-------|-----------|---------------------|-------------|--------|----------|
-| **Qwen3 235B-A22B-2507** | 235B/22B active | $0.07/$0.10/M tok | 0.31% error | 201 języków | ~2-6s |
-| Qwen3 235B-A22B (04-28) | 235B/22B active | $0.45/$1.82/M tok | Problemy z JSON* | 201 języków | ~5-25s |
+| **Qwen3 8B** | 8.2B | $0.05/$0.40/M tok | tak | 100+ języków | ~1-3s |
+| Qwen3 235B-A22B-2507 | 235B/22B active | $0.07/$0.10/M tok | 0.31% error | 201 języków | ~2-6s |
 | DeepSeek V3.2 | 671B/37B active | $0.26/$0.38/M tok | 0.51% error | ~30 języków | ~2-4s |
 | Llama 4 Maverick | 400B/17B active | $0.15/$0.60/M tok | brak danych | 200 języków | ~2-3s |
 
-*Wersja 04-28 ma problem z JSON mode: content=None, odpowiedź w polu reasoning. Wersja 2507 naprawia to.
-
-**Dlaczego Qwen3 235B Instruct 2507:**
-- Najlepszy multilingual benchmark (87.5% na 29 językach) — krytyczne dla polskich promptów
-- Najniższy structured output error rate (0.31%)
+**Dlaczego Qwen3 8B:**
+- Lekki model z dobrą obsługą polskiego (100+ języków)
 - Licencja Apache 2.0 (open-weights — dodatkowe punkty konkursowe)
-- Koszt ~$0.07/M input — przy ~2000 tokenów kontekstu to <$0.001 per request
-- Wersja 2507 poprawnie obsługuje `response_format: json_object` bez artefaktów thinking
-- Przetestowane: 3 scenariusze (pożar, briefing, ewakuacja) — poprawne odpowiedzi 4-25s
+- Niski koszt i niska latencja — szybsze odpowiedzi niż modele 235B
+- Kontekst 40K tokenów (rozszerzalny do 131K z YaRN)
+- Tryb "thinking" i "non-thinking" — elastyczność w zależności od zadania
+- Wystarczający do generowania ViewConfig JSON z katalogu warstw
 
 **Fallback:** Keyword-based heurystyka (zaimplementowana w `_fallback_config`) gdy OpenRouter niedostępny.
 
@@ -50,7 +48,7 @@ frontend/style.css        — Stylizacja ops-center
 1. Użytkownik opisuje sytuację w chacie
 2. Frontend → `POST /api/assistant/configure-view` z query
 3. Backend buduje system prompt z katalogiem warstw/atrybutów
-4. OpenRouter (Qwen3) → JSON ViewConfig
+4. OpenRouter (Qwen3 8B) → JSON ViewConfig
 5. Frontend `applyViewConfig()` → programowo przełącza warstwy, filtruje popupy, ustawia critical attribute
 
 ### Kontrakt ViewConfig
@@ -142,5 +140,5 @@ tools:
 2. **Persystencja widoku:** Czy konfiguracja widoku powinna być zapisywalna (np. "widok kryzysowy pożar", "widok codzienny smog")?
 3. **Multi-turn:** Czy asystent ma pamiętać kontekst rozmowy (np. "teraz pokaż mi jeszcze szkoły"), czy każde zapytanie jest niezależne?
 4. **Język:** Interfejs po polsku — czy asystent też musi odpowiadać po polsku? (Obecnie: tak, wymuszony w system prompt)
-5. **Latencja:** Jakie jest akceptowalne opóźnienie odpowiedzi asystenta? (Obecne ~2-3s z Qwen3 na OpenRouter)
+5. **Latencja:** Jakie jest akceptowalne opóźnienie odpowiedzi asystenta? (Obecne ~1-3s z Qwen3 8B na OpenRouter)
 6. **Scoring konkursowy:** Ile punktów za open-weights? Czy Ollama fallback też się liczy, czy musi być primary?
