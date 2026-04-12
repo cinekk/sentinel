@@ -777,6 +777,101 @@ header .subtitle {
 #alert-hud .hud-header:hover .hud-expand-hint { color: var(--amber); }
 #alert-hud.has-critical .hud-header:hover .hud-expand-hint { color: var(--red); }
 
+/* ── Hospital override modal ─────────────────────────────────────────────────── */
+
+.override-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modal-in .15s ease;
+}
+
+.override-modal-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  width: min(380px, 94vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.override-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-mid);
+  background: var(--bg-hover);
+}
+
+.override-modal-title {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--text-hi);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.override-modal-name {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--amber);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.override-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-mid);
+  cursor: pointer;
+  font-size: .75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.override-modal-close:hover { color: var(--text-hi); background: var(--bg-card); }
+
+.override-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.override-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: var(--text-mid);
+  gap: 8px;
+}
+
+.override-field-check {
+  justify-content: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.override-modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-mid);
+  justify-content: flex-end;
+}
+
 /* ── Alert modal ─────────────────────────────────────────────────────────────── */
 
 .alert-modal-backdrop {

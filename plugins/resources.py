@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -40,6 +41,55 @@ _DISPLAY_TYPES = {
     "social": "DPS/Placówka",
     "fire_station": "Straż Pożarna",
 }
+
+
+def _is_school_umbrella_name(name: str) -> bool:
+    """True if the name suggests an umbrella org (Zespół Szkół, Centrum Kształcenia, …)."""
+    n = name.casefold()
+    return (
+        "zespół" in n
+        or "zespol" in n
+        or "centrum kształcenia" in n
+        or "centrum ksztalcenia" in n
+    )
+
+
+def _pick_school_representative(entries: list[dict]) -> dict:
+    for e in entries:
+        if _is_school_umbrella_name(e.get("name", "")):
+            return e
+    return max(entries, key=lambda x: len(x.get("name", "")))
+
+
+def _deduplicate_schools(schools: list[dict]) -> list[dict]:
+    """Merge schools that share the same ~100 m grid cell into one record with sub_schools."""
+    grid: dict[tuple[float, float], list[dict]] = defaultdict(list)
+    for s in schools:
+        key = (round(float(s["lat"]), 3), round(float(s["lon"]), 3))
+        grid[key].append(s)
+
+    result: list[dict] = []
+    for entries in grid.values():
+        if len(entries) == 1:
+            result.append(entries[0])
+            continue
+        rep = _pick_school_representative(entries)
+        avg_lat = sum(float(e["lat"]) for e in entries) / len(entries)
+        avg_lon = sum(float(e["lon"]) for e in entries) / len(entries)
+        subs = [
+            {"name": e["name"], "school_type": e.get("school_type")}
+            for e in entries
+            if e is not rep
+        ]
+        merged = {
+            **rep,
+            "lat": avg_lat,
+            "lon": avg_lon,
+            "sub_schools": subs,
+            "sub_count": len(subs),
+        }
+        result.append(merged)
+    return result
 
 
 def _make_feature(record: dict, resource_type: str, idx: int) -> dict:
@@ -149,9 +199,10 @@ class SchoolsPlugin(BasePlugin):
     async def fetch(self) -> dict:
         self._last_updated = datetime.now(timezone.utc)
         data = _load_data()
+        deduped = _deduplicate_schools(data["schools"])
         features = [
             _make_feature(r, "school", i)
-            for i, r in enumerate(data["schools"])
+            for i, r in enumerate(deduped)
         ]
         return {"type": "FeatureCollection", "features": features}
 
