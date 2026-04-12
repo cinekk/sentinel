@@ -1,16 +1,23 @@
 """
 IMGW Hydrological Stations Plugin.
 
-Fetches live river gauge readings from the IMGW hydrology API and exposes them
-as a GeoJSON layer. Filtered to rivers in Lublin voivodeship.
+Fetches live river gauge readings and alert levels from two IMGW sources:
+  - https://danepubliczne.imgw.pl/api/data/hydro/   — current water levels
+  - https://res2.imgw.pl/products/hydro/river-statuses/YYYYMMDDHHII.json
+      — official IMGW status codes (alarm / warning / high / medium / low / below)
+        published every hour; dreCode == id_stacji
 
-API: https://hydro.imgw.pl/api/station/
+Alert level mapping (from IMGW legend, chunk-BWM4BEIR.js):
+  alarm   → "alarm"
+  warning → "warning"
+  high / medium / low / below → "normal"
+
 Cache TTL: 5 minutes (gauges update every ~10-15 min on the IMGW portal).
-
 Override support: call set_gauge_override(station_id, alert_level) for demo purposes.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Literal
@@ -21,13 +28,26 @@ from plugins.base import BasePlugin
 
 logger = logging.getLogger(__name__)
 
-_IMGW_API = "https://hydro.imgw.pl/api/station/"
+_IMGW_LEVELS_API = "https://danepubliczne.imgw.pl/api/data/hydro/"
+_IMGW_STATUS_BASE = "https://res2.imgw.pl/products/hydro/river-statuses/"
 
-# Lublin voivodeship bounding box
-_LAT_MIN, _LAT_MAX = 50.4, 51.9
-_LON_MIN, _LON_MAX = 21.5, 24.1
+_CACHE_TTL_SECONDS = 300  # 5 minutes (gauges update every ~10-15 min on the IMGW portal)
 
-_CACHE_TTL_SECONDS = 300  # 5 minutes
+# IMGW statusCode → our AlertLevel
+_STATUS_MAP: dict[str, str] = {
+    "alarm": "alarm",
+    "alarmOutdated": "alarm",
+    "warning": "warning",
+    "warningOutdated": "warning",
+    "high": "normal",
+    "highOutdated": "normal",
+    "medium": "normal",
+    "mediumOutdated": "normal",
+    "low": "normal",
+    "lowOutdated": "normal",
+    "below": "normal",
+    "belowOutdated": "normal",
+}
 
 AlertLevel = Literal["normal", "warning", "alarm", "unknown"]
 
@@ -50,45 +70,55 @@ def get_overrides() -> dict[str, AlertLevel]:
     return dict(_overrides)
 
 
-def _compute_alert_level(level_cm: float | None, warning_cm: float | None, alarm_cm: float | None) -> AlertLevel:
-    if level_cm is None:
-        return "unknown"
-    if alarm_cm and level_cm >= alarm_cm:
-        return "alarm"
-    if warning_cm and level_cm >= warning_cm:
-        return "warning"
-    return "normal"
+def _status_url_for(dt: datetime) -> str:
+    """Return the river-statuses JSON URL for the most recent whole hour."""
+    floored = dt.replace(minute=0, second=0, microsecond=0)
+    return f"{_IMGW_STATUS_BASE}{floored.strftime('%Y%m%d%H%M')}.json"
 
 
-def _in_lublin_bbox(lat: float, lon: float) -> bool:
-    return _LAT_MIN <= lat <= _LAT_MAX and _LON_MIN <= lon <= _LON_MAX
+async def _fetch_status_codes(client: httpx.AsyncClient) -> dict[str, str]:
+    """Return dreCode → AlertLevel mapping from the IMGW river-statuses file."""
+    url = _status_url_for(datetime.now(timezone.utc))
+    try:
+        resp = await client.get(url, timeout=10)
+        resp.raise_for_status()
+        return {
+            s["dreCode"]: _STATUS_MAP.get(s.get("statusCode", ""), "unknown")
+            for s in resp.json()
+        }
+    except Exception as exc:
+        logger.warning("IMGW river-statuses unavailable (%s): alert levels will be unknown", exc)
+        return {}
 
 
 async def _fetch_all_stations() -> list[dict]:
-    """Fetch all IMGW stations and return those within Lublin voivodeship bbox."""
+    """Fetch water levels + alert statuses for Lublin voivodeship stations."""
     async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.get(_IMGW_API)
-        resp.raise_for_status()
-        stations = resp.json()
+        levels_resp, status_codes = await asyncio.gather(
+            client.get(_IMGW_LEVELS_API),
+            _fetch_status_codes(client),
+        )
+        levels_resp.raise_for_status()
+        stations = levels_resp.json()
 
     result = []
     for s in stations:
+        if s.get("wojewodztwo") != "lubelskie":
+            continue
         try:
-            lat = float(s.get("lat") or s.get("latitude") or 0)
-            lon = float(s.get("lon") or s.get("longitude") or 0)
+            lat = float(s.get("lat") or 0)
+            lon = float(s.get("lon") or 0)
         except (TypeError, ValueError):
             continue
-        if not _in_lublin_bbox(lat, lon):
-            continue
+        sid = str(s.get("id_stacji") or "")
         result.append({
-            "id": str(s.get("id") or s.get("stationId") or ""),
-            "name": s.get("stationName") or s.get("name") or "Stacja IMGW",
-            "river": s.get("riverName") or s.get("river") or "—",
+            "id": sid,
+            "name": s.get("stacja") or "Stacja IMGW",
+            "river": s.get("rzeka") or "—",
             "lat": lat,
             "lon": lon,
-            "level_cm": _safe_float(s.get("state") or s.get("stan")),
-            "warning_cm": _safe_float(s.get("warningState") or s.get("ostrzezenie")),
-            "alarm_cm": _safe_float(s.get("alarmState") or s.get("alarm")),
+            "level_cm": _safe_float(s.get("stan_wody")),
+            "alert_level": status_codes.get(sid, "unknown"),
         })
     return result
 
@@ -101,9 +131,7 @@ def _safe_float(v: object) -> float | None:
 
 
 def _build_feature(s: dict) -> dict:
-    alert = _overrides.get(s["id"]) or _compute_alert_level(
-        s["level_cm"], s["warning_cm"], s["alarm_cm"]
-    )
+    alert: str = _overrides.get(s["id"]) or s["alert_level"]
     color = {"normal": "#22c55e", "warning": "#f59e0b", "alarm": "#ef4444"}.get(alert, "#6b7280")
     return {
         "type": "Feature",
@@ -113,8 +141,6 @@ def _build_feature(s: dict) -> dict:
             "station_name": s["name"],
             "river": s["river"],
             "level_cm": s["level_cm"],
-            "warning_cm": s["warning_cm"],
-            "alarm_cm": s["alarm_cm"],
             "alert_level": alert,
             "overridden": s["id"] in _overrides,
             "updated_at": datetime.now(timezone.utc).isoformat(),
