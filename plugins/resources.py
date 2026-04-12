@@ -186,10 +186,21 @@ _STATUS_LABEL = {
 }
 
 
+_BASE_HOSPITAL_FIELDS = (
+    "short_name", "hospital_type", "operator", "nfz_contract",
+    "street", "city", "postal_code",
+    "has_sor", "has_izba_przyjec", "sor_throughput_per_day",
+    "beds_total_physical", "icu_oiom_beds", "operating_rooms",
+    "ct_24_7", "helipad", "backup_power", "backup_power_fuel_hours",
+    "phone_24h_sor", "specializations",
+)
+
+
 class HospitalStatusPlugin(BasePlugin):
     """
     Hospital flood assessment layer.
-    Calls FloodAssessmentService and returns color-coded GeoJSON markers.
+    Calls FloodAssessmentService and returns color-coded GeoJSON markers
+    enriched with base hospital detail so the popup contains everything.
     """
     layer_id = "hospitals-status"
     layer_name = "Szpitale — status powodziowy"
@@ -197,33 +208,60 @@ class HospitalStatusPlugin(BasePlugin):
 
     async def fetch(self) -> dict:
         from services.flood_assessment import assess_hospitals
+        from services.transfer import get_transfer_recommendations
+        from sqlalchemy import select
 
         self._last_updated = datetime.now(timezone.utc)
         statuses = await assess_hospitals()
 
+        # Load base hospital rows for enrichment
+        async with SessionLocal() as session:
+            result = await session.execute(select(HospitalRow))
+            rows = result.scalars().all()
+        row_by_id: dict = {(r.facility_id or str(r.id)): r for r in rows}
+
+        # Build transfer_targets lookup: hospital_id → list of short names
+        recommendations = await get_transfer_recommendations()
+        transfer_by_id: dict = {
+            rec.from_hospital_id: [t.short_name for t in rec.targets]
+            for rec in recommendations
+        }
+
         features = []
         for s in statuses:
             color = _STATUS_COLOR.get(s.status, "#6b7280")
+            row = row_by_id.get(s.hospital_id)
+
+            props: dict = {
+                "id": s.hospital_id,
+                "name": s.name,
+                "type": "hospital_status",
+                "status": s.status,
+                "status_label": _STATUS_LABEL.get(s.status, s.status),
+                "beds": s.beds,
+                "sor": s.sor,
+                "generator_state": s.generator_state,
+                "personnel_pct": s.personnel_pct,
+                "nearest_gauge": s.nearest_gauge,
+                "nearest_gauge_level": s.nearest_gauge_level,
+                "demand_112": s.demand_112,
+                "can_receive": s.can_receive,
+                "risk_factors": s.risk_factors,
+                "marker_color": color,
+                "transfer_targets": transfer_by_id.get(s.hospital_id, []),
+            }
+
+            # Enrich with base hospital fields when available
+            if row:
+                for field in _BASE_HOSPITAL_FIELDS:
+                    value = getattr(row, field, None)
+                    if value is not None:
+                        props[field] = value
+
             features.append({
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [s.lon, s.lat]},
-                "properties": {
-                    "id": s.hospital_id,
-                    "name": s.name,
-                    "type": "hospital_status",
-                    "status": s.status,
-                    "status_label": _STATUS_LABEL.get(s.status, s.status),
-                    "beds": s.beds,
-                    "sor": s.sor,
-                    "generator_state": s.generator_state,
-                    "personnel_pct": s.personnel_pct,
-                    "nearest_gauge": s.nearest_gauge,
-                    "nearest_gauge_level": s.nearest_gauge_level,
-                    "demand_112": s.demand_112,
-                    "can_receive": s.can_receive,
-                    "risk_factors": s.risk_factors,
-                    "marker_color": color,
-                },
+                "properties": props,
             })
 
         return {"type": "FeatureCollection", "features": features}

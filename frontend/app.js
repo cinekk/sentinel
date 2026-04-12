@@ -1,5 +1,66 @@
 const API = '';  // same origin
 
+// ── Tab-aware layer rules ─────────────────────────────────────────────────────
+// show: enable these layers when the tab becomes active
+// hide: disable these layers when the tab becomes active (and re-enable on leave)
+const TAB_LAYER_RULES = {
+  flood: {
+    show: ['hospitals-status', 'gauges', 'flood_zones', 'events'],
+    hide: ['hospitals'],
+  },
+  // Leaving flood tab restores the base hospitals layer
+};
+
+function applyTabLayerRules(tab) {
+  // Hide layers owned by OTHER tabs (restore base layer when leaving flood)
+  Object.entries(TAB_LAYER_RULES).forEach(([ruleTab, rules]) => {
+    if (ruleTab === tab) return;
+    (rules.hide || []).forEach(id => {
+      // These were hidden by the other tab — restore them
+      if (!(id in layerEnabled)) return;
+      layerEnabled[id] = true;
+      const group = layerGroups[id];
+      if (group && !map.hasLayer(group)) group.addTo(map);
+      const cb = document.getElementById(`toggle-${id}`);
+      if (cb) cb.checked = true;
+      // Restore transfer lines with hospitals-status when leaving flood tab
+      if (id === 'hospitals-status' && _transferLinesLayer && !map.hasLayer(_transferLinesLayer)) {
+        _transferLinesLayer.addTo(map);
+      }
+    });
+  });
+
+  const rules = TAB_LAYER_RULES[tab];
+  if (!rules) return;
+
+  // Hide conflicting layers
+  (rules.hide || []).forEach(id => {
+    layerEnabled[id] = false;
+    const group = layerGroups[id];
+    if (group && map.hasLayer(group)) map.removeLayer(group);
+    const cb = document.getElementById(`toggle-${id}`);
+    if (cb) cb.checked = false;
+    // Transfer lines are coupled to hospitals-status
+    if (id === 'hospitals-status' && _transferLinesLayer && map.hasLayer(_transferLinesLayer)) {
+      map.removeLayer(_transferLinesLayer);
+    }
+  });
+
+  // Enable flood-context layers (show-only — not hidden when leaving tab)
+  (rules.show || []).forEach(id => {
+    if (layerEnabled[id]) return;  // already on
+    layerEnabled[id] = true;
+    const group = layerGroups[id];
+    if (group && !map.hasLayer(group)) group.addTo(map);
+    const cb = document.getElementById(`toggle-${id}`);
+    if (cb) cb.checked = true;
+    // Transfer lines are coupled to hospitals-status
+    if (id === 'hospitals-status' && _transferLinesLayer && !map.hasLayer(_transferLinesLayer)) {
+      _transferLinesLayer.addTo(map);
+    }
+  });
+}
+
 // ── Sidebar tabs ──────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.stab').forEach(btn => {
@@ -9,6 +70,7 @@ document.querySelectorAll('.stab').forEach(btn => {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.querySelector(`.tab-panel[data-panel="${tab}"]`).classList.add('active');
+    applyTabLayerRules(tab);
   });
 });
 
@@ -37,6 +99,12 @@ const layerMeta    = {};   // layer_id → meta object
 const _layerGeoJSON  = {};    // layer_id → raw GeoJSON FeatureCollection (for in-tab reads)
 let _fireCrisisId    = null;  // tracks active fire crisis_id for fire tab panel
 let allEvents = [];
+
+// ── Change-detection state ────────────────────────────────────────────────────
+let _knownEventIds         = null;  // null = first load, skip toasts
+let _knownHospitalStatuses = {};    // hospital_id → status string
+let _lastFloodTick         = -1;
+const _eventMarkers        = new Map();  // event id → L.Marker
 
 const layerConfig       = {};  // layer_id → {mainProp, thresholds, popupProps}
 const layerNumericProps = {};  // layer_id → string[]  (numeric property names)
@@ -225,8 +293,8 @@ function pointToLayer(feature, latlng, layerId) {
     const markerClass = `map-marker-wrap${pulse ? ' marker-pulse' : ''}`;
     return L.marker(latlng, {
       icon: L.divIcon({
-        html: `<div class="${markerClass}" style="background:${color}22;border:2px solid ${color};border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:.9rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.9))">🏥</div>`,
-        iconSize: [24, 24], iconAnchor: [12, 12], className: '',
+        html: `<div class="${markerClass}" style="background:${color}33;border:2.5px solid ${color};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;box-shadow:0 0 10px ${color}66,0 2px 8px rgba(0,0,0,.9)">🏥</div>`,
+        iconSize: [36, 36], iconAnchor: [18, 18], className: '',
       }),
     });
   }
@@ -251,13 +319,13 @@ function pointToLayer(feature, latlng, layerId) {
     const bgColor = getColorForValue(propVal, cfg.thresholds);
     const pulse   = bgColor && isLowestBucket(propVal, cfg.thresholds);
     const circleStyle = bgColor
-      ? `background:${bgColor};border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;${pulse ? '' : `box-shadow:0 0 6px ${bgColor}88;`}`
-      : '';
+      ? `background:${bgColor};border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;${pulse ? '' : `box-shadow:0 0 8px ${bgColor}88;`}`
+      : 'width:30px;height:30px;display:flex;align-items:center;justify-content:center;';
     const markerClass = `map-marker-wrap${pulse ? ' marker-pulse' : ''}`;
     return L.marker(latlng, {
       icon: L.divIcon({
-        html: `<div class="${markerClass}" style="${circleStyle}font-size:1rem;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">${resourceIcon}</div>`,
-        iconSize: [22, 22], iconAnchor: [11, 11], className: '',
+        html: `<div class="${markerClass}" style="${circleStyle}font-size:1.15rem;filter:drop-shadow(0 2px 5px rgba(0,0,0,.9))">${resourceIcon}</div>`,
+        iconSize: [30, 30], iconAnchor: [15, 15], className: '',
       }),
     });
   }
@@ -269,22 +337,22 @@ function pointToLayer(feature, latlng, layerId) {
   if (type === 'event') {
     const props = feature.properties ?? {};
     const isNoResponse = props.status === 'investigating';
-    const ringColor = isNoResponse ? '#7f1d1d' : (SEVERITY_COLOR[severity] || '#6e92b4');
+    const ringColor = isNoResponse ? '#ef4444' : (SEVERITY_COLOR[severity] || '#6e92b4');
     const pulse = isNoResponse || severity === 'critical';
     const markerClass = `map-marker-wrap${pulse ? ' marker-pulse' : ''}`;
-    const border = `2px solid ${ringColor}`;
+    const border = `2.5px solid ${ringColor}`;
     return L.marker(latlng, {
       icon: L.divIcon({
-        html: `<div class="${markerClass}" style="background:${ringColor}22;border:${border};border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:1rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.9))">${icon}</div>`,
-        iconSize: [24, 24], iconAnchor: [12, 12], className: '',
+        html: `<div class="${markerClass}" style="background:${ringColor}28;border:${border};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 0 8px ${ringColor}55,0 2px 6px rgba(0,0,0,.9)">${icon}</div>`,
+        iconSize: [32, 32], iconAnchor: [16, 16], className: '',
       }),
     });
   }
 
   return L.marker(latlng, {
     icon: L.divIcon({
-      html: `<div class="map-marker-wrap" style="font-size:1.4rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.9))">${icon}</div>`,
-      iconSize: [24, 24], iconAnchor: [12, 12], className: '',
+      html: `<div class="map-marker-wrap" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;filter:drop-shadow(0 2px 5px rgba(0,0,0,.9))">${icon}</div>`,
+      iconSize: [30, 30], iconAnchor: [15, 15], className: '',
     }),
   });
 }
@@ -419,6 +487,11 @@ function renderLayerPanel(layers) {
         group.addTo(map);
       } else {
         map.removeLayer(group);
+      }
+      // Transfer lines are coupled to the hospitals-status layer
+      if (layer.layer_id === 'hospitals-status' && _transferLinesLayer) {
+        if (e.target.checked) { if (!map.hasLayer(_transferLinesLayer)) _transferLinesLayer.addTo(map); }
+        else { if (map.hasLayer(_transferLinesLayer)) map.removeLayer(_transferLinesLayer); }
       }
     });
 
@@ -561,7 +634,7 @@ function renderEvents(events) {
   const shown = [...events].reverse().slice(0, 50);
 
   list.innerHTML = shown.map(ev => `
-    <div class="event-card severity-${ev.severity}" data-lat="${ev.latitude}" data-lon="${ev.longitude}">
+    <div class="event-card severity-${ev.severity}" data-lat="${ev.latitude}" data-lon="${ev.longitude}" data-id="${ev.id}">
       <div class="event-title">${CATEGORY_ICON[ev.category] || '⚠️'} ${ev.description}</div>
       <div class="event-meta">
         <span>${ev.category}</span>
@@ -575,7 +648,14 @@ function renderEvents(events) {
     card.addEventListener('click', () => {
       const lat = parseFloat(card.dataset.lat);
       const lon = parseFloat(card.dataset.lon);
-      if (lat && lon) map.setView([lat, lon], 12);
+      const id  = parseInt(card.dataset.id);
+      if (!lat || !lon) return;
+      const marker = _eventMarkers.get(id);
+      if (marker && layerGroups['__events__']) {
+        layerGroups['__events__'].zoomToShowLayer(marker, () => marker.openPopup());
+      } else {
+        map.setView([lat, lon], 13);
+      }
     });
   });
 }
@@ -584,7 +664,47 @@ function filterEventsByPowiat(name) {
   console.log('Filter by powiat:', name);
 }
 
-function renderEventMarkers(events) {
+// ── Popup helpers ─────────────────────────────────────────────────────────────
+
+// Find a marker in a layer group by approximate lat/lon and open its popup.
+// Uses MarkerClusterGroup.zoomToShowLayer so it unspiderfies clusters first.
+function openLayerMarkerPopup(layerId, lat, lon, zoom = 13) {
+  const group = layerGroups[layerId];
+  if (!group) { map.setView([lat, lon], zoom); return; }
+
+  map.setView([lat, lon], zoom);
+
+  // Short delay to let the map pan settle before looking up layers
+  setTimeout(() => {
+    const layers = typeof group.getLayers === 'function' ? group.getLayers() : [];
+    // For MarkerClusterGroup, getLayers() returns all child layers recursively
+    const allLayers = [];
+    const collect = (l) => {
+      if (typeof l.getLayers === 'function') l.getLayers().forEach(collect);
+      else allLayers.push(l);
+    };
+    layers.forEach(collect);
+
+    let best = null;
+    let bestDist = Infinity;
+    for (const layer of allLayers) {
+      if (!layer.getLatLng) continue;
+      const ll = layer.getLatLng();
+      const d  = Math.abs(ll.lat - lat) + Math.abs(ll.lng - lon);
+      if (d < bestDist) { bestDist = d; best = layer; }
+    }
+
+    if (best && bestDist < 0.01) {
+      if (typeof group.zoomToShowLayer === 'function') {
+        group.zoomToShowLayer(best, () => best.openPopup());
+      } else {
+        best.openPopup();
+      }
+    }
+  }, 280);
+}
+
+function renderEventMarkers(events, newIds = new Set()) {
   if (!layerGroups['__events__']) {
     layerGroups['__events__'] = L.markerClusterGroup({
       chunkedLoading: true,
@@ -593,16 +713,33 @@ function renderEventMarkers(events) {
       iconCreateFunction: makeClusterIconFactory(LAYER_TYPE_COLOR.events),
     }).addTo(map);
   }
-  layerGroups['__events__'].clearLayers();
 
-  events.forEach(ev => {
-    if (!ev.latitude || !ev.longitude) return;
+  // Incremental update: remove stale, add new only (avoids flicker on every poll)
+  const currentIds = new Set(
+    events.filter(e => e.latitude && e.longitude).map(e => e.id)
+  );
+
+  for (const [id, marker] of _eventMarkers) {
+    if (!currentIds.has(id)) {
+      layerGroups['__events__'].removeLayer(marker);
+      _eventMarkers.delete(id);
+    }
+  }
+
+  for (const ev of events) {
+    if (!ev.latitude || !ev.longitude) continue;
+    if (_eventMarkers.has(ev.id)) continue;  // already on map
+
     const icon  = CATEGORY_ICON[ev.category] || '⚠️';
     const color = SEVERITY_COLOR[ev.severity] || '#6e92b4';
-    L.marker([ev.latitude, ev.longitude], {
+    const isNew = newIds.has(ev.id);
+    const isCrit = ev.severity === 'critical' || ev.severity === 'high';
+    const animClass = isNew ? (isCrit ? ' marker-new-ring' : ' marker-new') : '';
+
+    const marker = L.marker([ev.latitude, ev.longitude], {
       icon: L.divIcon({
-        html: `<div class="map-marker-wrap" style="font-size:1.5rem;filter:drop-shadow(0 1px 4px rgba(0,0,0,.9))">${icon}</div>`,
-        iconSize: [28, 28], iconAnchor: [14, 14], className: '',
+        html: `<div class="map-marker-wrap${animClass}" style="background:${color}28;border:2px solid ${color};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 0 8px ${color}44,0 1px 6px rgba(0,0,0,.9)">${icon}</div>`,
+        iconSize: [32, 32], iconAnchor: [16, 16], className: '',
       }),
     })
       .bindPopup(`
@@ -612,9 +749,11 @@ function renderEventMarkers(events) {
         <div class="popup-row">Status <span>${ev.status}</span></div>
         <div class="popup-row">Czas <span>${formatTime(ev.time)}</span></div>
         <div class="popup-row">Źródło <span>${ev.source}</span></div>
-      `)
-      .addTo(layerGroups['__events__']);
-  });
+      `);
+
+    layerGroups['__events__'].addLayer(marker);
+    _eventMarkers.set(ev.id, marker);
+  }
 }
 
 // ── Alert modal ───────────────────────────────────────────────────────────────
@@ -712,6 +851,47 @@ function renderAlertHud(alerts) {
   }).join('');
 }
 
+// ── Toast notification system ─────────────────────────────────────────────────
+
+const TOAST_MAX      = 4;
+const TOAST_DURATION = 5500;
+
+function showToast(message, type = 'info', title = null, duration = TOAST_DURATION) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  // Drop oldest toast when at cap
+  while (container.children.length >= TOAST_MAX) {
+    const oldest = container.firstChild;
+    if (oldest) { clearTimeout(oldest._toastTimer); oldest.remove(); }
+    else break;
+  }
+
+  const iconMap = { info: 'ℹ', warning: '⚠', critical: '⚡', success: '✓' };
+  const icon = iconMap[type] || 'ℹ';
+
+  const el = document.createElement('div');
+  el.className = `toast toast--${type}`;
+  el.innerHTML =
+    `<span class="toast-icon">${icon}</span>` +
+    `<div class="toast-content">` +
+      (title ? `<div class="toast-title">${escapeHtml(title)}</div>` : '') +
+      `<div class="toast-msg">${escapeHtml(message)}</div>` +
+    `</div>` +
+    `<button class="toast-close" title="Zamknij">✕</button>`;
+
+  el.querySelector('.toast-close').addEventListener('click', () => dismissToast(el));
+  container.appendChild(el);
+  el._toastTimer = setTimeout(() => dismissToast(el), duration);
+}
+
+function dismissToast(el) {
+  if (!el || !el.parentNode) return;
+  clearTimeout(el._toastTimer);
+  el.classList.add('toast--out');
+  setTimeout(() => el.remove(), 220);
+}
+
 // ── Main refresh ──────────────────────────────────────────────────────────────
 
 async function refresh() {
@@ -730,9 +910,28 @@ async function refresh() {
 
     const eventsRes = await fetch(`${API}/api/events`);
     if (eventsRes.ok) {
-      allEvents = await eventsRes.json();
+      const freshEvents = await eventsRes.json();
+
+      // Detect newly-arrived events (skip on first load to avoid mass toasts)
+      let newIds = new Set();
+      if (_knownEventIds !== null) {
+        newIds = new Set(freshEvents.filter(e => !_knownEventIds.has(e.id)).map(e => e.id));
+        const newOnes = freshEvents.filter(e => newIds.has(e.id));
+        const toShow  = newOnes.slice(0, 3);
+        for (const ev of toShow) {
+          const icon = CATEGORY_ICON[ev.category] || '⚠️';
+          const t    = ev.severity === 'critical' ? 'critical'
+                     : ev.severity === 'high'     ? 'warning' : 'info';
+          showToast(ev.description, t, `${icon} Nowe zgłoszenie`);
+        }
+        if (newOnes.length > 3) {
+          showToast(`…i ${newOnes.length - 3} więcej nowych zdarzeń`, 'info');
+        }
+      }
+      _knownEventIds = new Set(freshEvents.map(e => e.id));
+      allEvents = freshEvents;
       renderEvents(allEvents);
-      renderEventMarkers(allEvents);
+      renderEventMarkers(allEvents, newIds);
     }
 
     document.getElementById('last-updated').textContent = new Date().toLocaleTimeString('pl-PL');
@@ -922,6 +1121,7 @@ async function pollAlerts() {
 document.getElementById('btn-clear-events').addEventListener('click', async () => {
   await fetch(`${API}/api/events`, { method: 'DELETE' });
   allEvents = [];
+  _knownEventIds = new Set();
   renderEvents([]);
   renderEventMarkers([]);
   document.getElementById('event-count').textContent = '0 zdarzeń';
@@ -1313,12 +1513,89 @@ const GAUGE_ALERT_COLOR  = { normal: '#22c55e', warning: '#f59e0b', alarm: '#ef4
 const GAUGE_ALERT_LABEL  = { normal: 'Normal', warning: 'Ostrzeżenie', alarm: 'ALARM', unknown: '—' };
 
 let _floodHospitals = [];
+let _transferLinesLayer = null;
+
+function _lineBearing(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2))
+          - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+async function loadTransferLines() {
+  try {
+    const res = await fetch(`${API}/api/flood/transfer-recommendations`);
+    if (!res.ok) return;
+    const recs = await res.json();
+
+    if (_transferLinesLayer) {
+      _transferLinesLayer.clearLayers();
+    } else {
+      _transferLinesLayer = L.layerGroup();
+    }
+
+    for (const rec of recs) {
+      for (const tgt of rec.targets) {
+        // Animated dashed line (CSS handles the flow animation via className)
+        const line = L.polyline(
+          [[rec.from_lat, rec.from_lon], [tgt.lat, tgt.lon]],
+          { color: '#f59e0b', weight: 2, dashArray: '8 6', opacity: 0.85,
+            className: 'transfer-animated-line' }
+        );
+        const sorTag = tgt.has_sor ? ' · SOR' : '';
+        line.bindTooltip(
+          `→ ${tgt.short_name} · ${tgt.distance_km} km · ${tgt.available_beds} łóżek${sorTag}`,
+          { sticky: true, className: 'transfer-tooltip' }
+        );
+        _transferLinesLayer.addLayer(line);
+
+        // Direction arrowhead at midpoint, rotated to bearing
+        const midLat = (rec.from_lat + tgt.lat) / 2;
+        const midLon = (rec.from_lon + tgt.lon) / 2;
+        const b = _lineBearing(rec.from_lat, rec.from_lon, tgt.lat, tgt.lon);
+        const arrowIcon = L.divIcon({
+          html: `<div style="transform:rotate(${b - 90}deg);transform-origin:center;font-size:11px;color:#f59e0b;line-height:1;text-shadow:0 0 4px #0008">▶</div>`,
+          className: '',
+          iconSize: [12, 12],
+          iconAnchor: [6, 6],
+        });
+        _transferLinesLayer.addLayer(
+          L.marker([midLat, midLon], { icon: arrowIcon, interactive: false })
+        );
+      }
+    }
+
+    // Only show if hospitals-status layer is currently active
+    const hostsEnabled = layerEnabled['hospitals-status'] !== false;
+    if (hostsEnabled && !map.hasLayer(_transferLinesLayer)) {
+      _transferLinesLayer.addTo(map);
+    }
+  } catch (e) {
+    console.warn('Transfer lines load failed:', e);
+  }
+}
 
 async function loadFloodAssessment() {
   try {
-    const res = await fetch(`${API}/api/flood/assessment`);
-    if (!res.ok) return;
-    _floodHospitals = await res.json();
+    const [assessRes, transferRes] = await Promise.all([
+      fetch(`${API}/api/flood/assessment`),
+      fetch(`${API}/api/flood/transfer-recommendations`),
+    ]);
+    if (!assessRes.ok) return;
+    _floodHospitals = await assessRes.json();
+
+    // Merge transfer targets into each hospital object for the table
+    if (transferRes.ok) {
+      const recs = await transferRes.json();
+      const recMap = {};
+      for (const r of recs) recMap[r.from_hospital_id] = r.targets;
+      for (const h of _floodHospitals) {
+        h.transfer_targets = recMap[h.hospital_id] || [];
+      }
+    }
+
     renderHospitalStatusTable(_floodHospitals);
     updateFloodBadge(_floodHospitals);
     populateOverrideSelector(_floodHospitals);
@@ -1385,6 +1662,21 @@ function renderHospitalStatusTable(hospitals) {
   const counts = document.getElementById('flood-hosp-counts');
   if (!el) return;
 
+  // Detect status changes and fire toasts
+  for (const h of hospitals) {
+    const prev = _knownHospitalStatuses[h.hospital_id];
+    if (prev !== undefined && prev !== h.status) {
+      if (h.status === 'evacuate') {
+        showToast(`${h.name} — zarządzono ewakuację pacjentów`, 'critical', '🏥 Zmiana statusu szpitala', 8000);
+      } else if (h.status === 'at_risk') {
+        showToast(`${h.name} — szpital w strefie zagrożenia`, 'warning', '🏥 Zmiana statusu szpitala');
+      } else if (h.status === 'operational') {
+        showToast(`${h.name} — status przywrócony`, 'success', '🏥 Zmiana statusu szpitala');
+      }
+    }
+    _knownHospitalStatuses[h.hospital_id] = h.status;
+  }
+
   const evac = hospitals.filter(h => h.status === 'evacuate').length;
   const risk = hospitals.filter(h => h.status === 'at_risk').length;
   const ok   = hospitals.filter(h => h.status === 'operational').length;
@@ -1414,6 +1706,16 @@ function renderHospitalStatusTable(hospitals) {
     const factors = (h.risk_factors || []).length
       ? `<div class="flood-risk-factors">${h.risk_factors.map(f => `<span class="flood-factor">${escapeHtml(f)}</span>`).join('')}</div>`
       : '';
+    // Small capacity warning: flag hospitals with very few beds — critical for patient routing
+    const isSmallCapacity = h.beds != null && h.beds < 80;
+    const bedsColor = isSmallCapacity ? '#f59e0b' : 'inherit';
+    const bedsTitle = isSmallCapacity ? ' title="Mała pojemność — ograniczone możliwości przyjęcia pacjentów"' : '';
+    const transferRow = (h.transfer_targets && h.transfer_targets.length)
+      ? `<div class="flood-transfer-row">
+           <span class="flood-transfer-label">↪ Przekieruj do:</span>
+           ${h.transfer_targets.map(t => `<span class="flood-tag flood-tag--amber">${escapeHtml(t.short_name)}</span>`).join('')}
+         </div>`
+      : '';
     return `
       <div class="flood-hosp-row" data-lat="${h.lat}" data-lon="${h.lon}" data-id="${h.hospital_id}">
         <div class="flood-hosp-top">
@@ -1424,11 +1726,12 @@ function renderHospitalStatusTable(hospitals) {
           ${sorTag}${receiveTag}
           <span class="flood-meta-item">${genIcon} gen: ${h.generator_state}</span>
           <span class="flood-meta-item">👤 ${h.personnel_pct}%</span>
-          <span class="flood-meta-item">🛏 ${h.beds}</span>
+          <span class="flood-meta-item" style="color:${bedsColor}"${bedsTitle}>🛏 ${h.beds}${isSmallCapacity ? ' ⚠' : ''}</span>
           ${h.demand_112 ? `<span class="flood-meta-item">🚑 112: ${h.demand_112}</span>` : ''}
           ${gaugeInfo}
         </div>
         ${factors}
+        ${transferRow}
       </div>
     `;
   }).join('');
@@ -1437,7 +1740,8 @@ function renderHospitalStatusTable(hospitals) {
     row.addEventListener('click', () => {
       const lat = parseFloat(row.dataset.lat);
       const lon = parseFloat(row.dataset.lon);
-      if (lat && lon) map.setView([lat, lon], 13);
+      if (!lat || !lon) return;
+      openLayerMarkerPopup('hospitals-status', lat, lon, 14);
     });
   });
 }
@@ -1562,6 +1866,8 @@ function updateFloodSimUI(state) {
   const running = state.running;
   _floodSimRunning = running;
 
+  _lastFloodTick = running ? state.tick : -1;
+
   const startBtn  = document.getElementById('flood-sim-start');
   const stopBtn   = document.getElementById('flood-sim-stop');
   const timeEl    = document.getElementById('flood-sim-time');
@@ -1646,23 +1952,12 @@ function initFloodDashboard() {
     await refreshFloodTab();
   });
 
-  // Activate the hospitals-status and gauges layers when flood tab is opened
-  document.querySelector('.stab[data-tab="flood"]')?.addEventListener('click', () => {
-    ['hospitals-status', 'gauges', 'flood_zones'].forEach(id => {
-      if (!layerEnabled[id]) {
-        layerEnabled[id] = true;
-        const group = layerGroups[id];
-        if (group && !map.hasLayer(group)) group.addTo(map);
-        const cb = document.getElementById(`toggle-${id}`);
-        if (cb) cb.checked = true;
-      }
-    });
-  });
 }
 
 async function refreshFloodTab() {
   await loadFloodAssessment();
   await loadGauges();
+  await loadTransferLines();
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

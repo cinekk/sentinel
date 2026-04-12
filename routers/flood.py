@@ -20,6 +20,7 @@ from services.flood_assessment import (
     set_hospital_override,
 )
 from services.openrouter import chat_completion
+from services.transfer import TransferRecommendation, get_transfer_recommendations
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["flood"])
@@ -32,6 +33,15 @@ router = APIRouter(prefix="/api", tags=["flood"])
 @router.get("/flood/assessment", response_model=list[HospitalFloodStatus])
 async def get_flood_assessment() -> list[HospitalFloodStatus]:
     return await assess_hospitals()
+
+
+# ---------------------------------------------------------------------------
+# GET /api/flood/transfer-recommendations
+# ---------------------------------------------------------------------------
+
+@router.get("/flood/transfer-recommendations", response_model=list[TransferRecommendation])
+async def get_transfer_recs() -> list[TransferRecommendation]:
+    return await get_transfer_recommendations()
 
 
 # ---------------------------------------------------------------------------
