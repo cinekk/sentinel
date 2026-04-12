@@ -172,3 +172,58 @@ class FireStationsPlugin(BasePlugin):
             for i, s in enumerate(_FIRE_STATIONS)
         ]
         return {"type": "FeatureCollection", "features": features}
+
+
+_STATUS_COLOR = {
+    "operational": "#22c55e",
+    "at_risk": "#f59e0b",
+    "evacuate": "#ef4444",
+}
+_STATUS_LABEL = {
+    "operational": "Sprawny",
+    "at_risk": "Zagrożony",
+    "evacuate": "Ewakuacja",
+}
+
+
+class HospitalStatusPlugin(BasePlugin):
+    """
+    Hospital flood assessment layer.
+    Calls FloodAssessmentService and returns color-coded GeoJSON markers.
+    """
+    layer_id = "hospitals-status"
+    layer_name = "Szpitale — status powodziowy"
+    data_type = "hospital_status"
+
+    async def fetch(self) -> dict:
+        from services.flood_assessment import assess_hospitals
+
+        self._last_updated = datetime.now(timezone.utc)
+        statuses = await assess_hospitals()
+
+        features = []
+        for s in statuses:
+            color = _STATUS_COLOR.get(s.status, "#6b7280")
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [s.lon, s.lat]},
+                "properties": {
+                    "id": s.hospital_id,
+                    "name": s.name,
+                    "type": "hospital_status",
+                    "status": s.status,
+                    "status_label": _STATUS_LABEL.get(s.status, s.status),
+                    "beds": s.beds,
+                    "sor": s.sor,
+                    "generator_state": s.generator_state,
+                    "personnel_pct": s.personnel_pct,
+                    "nearest_gauge": s.nearest_gauge,
+                    "nearest_gauge_level": s.nearest_gauge_level,
+                    "demand_112": s.demand_112,
+                    "can_receive": s.can_receive,
+                    "risk_factors": s.risk_factors,
+                    "marker_color": color,
+                },
+            })
+
+        return {"type": "FeatureCollection", "features": features}
