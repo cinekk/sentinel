@@ -54,6 +54,7 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 | 8 — Polish & Demo | [PHASE-8-demo.md](PHASE-8-demo.md) | 🔲 Not started |
 | 9 — Flood Medical Crisis (Zestaw A) | [PHASE-9-flood-medical.md](PHASE-9-flood-medical.md) | ✅ Done |
 | 10 — Flood Scenario Simulation Engine | [PHASE-10-flood-simulation.md](PHASE-10-flood-simulation.md) | ✅ Done |
+| 11 — Fire Redesign + UI Unification | [PHASE-11-fire-redesign.md](PHASE-11-fire-redesign.md) | 🔲 Not started |
 
 ---
 
