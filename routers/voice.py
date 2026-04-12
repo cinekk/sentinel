@@ -1,4 +1,5 @@
 """Voice briefing endpoint — generates TTS audio with synchronized word timings."""
+import asyncio
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -45,22 +46,28 @@ async def _load_resource_features() -> list[dict]:
 async def voice_briefing() -> BriefingResponse:
     try:
         active = store.list_active()
-
-        affected: list[dict] = []
-        if active:
-            facilities = await _load_resource_features()
-            affected = facilities_in_zones(active, facilities)
-
         sim_plugin   = registry.get("simulation_threat")
         flood_plugin = registry.get("flood_scenario")
+        flood_state  = flood_plugin.state if flood_plugin else None
 
-        flood_state     = flood_plugin.state if flood_plugin else None
-        flood_hospitals: list[dict] = []
+        tasks: dict[str, asyncio.Task] = {}
+        if active:
+            tasks["facilities"] = asyncio.create_task(_load_resource_features())
+        tasks["air"] = asyncio.create_task(get_air_quality_data())
         if flood_state and flood_state.get("running"):
             from services.flood_assessment import assess_hospitals
-            statuses = await assess_hospitals()
+            tasks["flood"] = asyncio.create_task(assess_hospitals())
+
+        results = {k: await v for k, v in tasks.items()}
+
+        affected: list[dict] = []
+        if active and "facilities" in results:
+            affected = facilities_in_zones(active, results["facilities"])
+
+        flood_hospitals: list[dict] = []
+        if "flood" in results:
             flood_hospitals = [
-                s.model_dump() for s in statuses
+                s.model_dump() for s in results["flood"]
                 if s.status in ("evacuate", "at_risk")
             ]
 
@@ -70,7 +77,7 @@ async def voice_briefing() -> BriefingResponse:
             sim_state=sim_plugin.state if sim_plugin else None,
             flood_scenario_state=flood_state,
             flood_hospitals=flood_hospitals,
-            air_quality=await get_air_quality_data(),
+            air_quality=results.get("air", []),
             weather=WEATHER_DATA,
         )
         text = generate_briefing_text(ctx)

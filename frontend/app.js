@@ -1526,11 +1526,15 @@ async function requestBriefing() {
   btn.disabled = true;
   btn.textContent = '⏳';
 
+  showBriefingWidget();
+  const textEl = document.getElementById('briefing-text');
+  textEl.innerHTML = '<span class="briefing-word speaking">Generuję briefing…</span>';
+
   try {
     const res = await fetch(`${API}/api/voice/briefing`, { method: 'POST' });
     if (!res.ok) {
       const err = await res.text();
-      alert(`Briefing error: ${err}`);
+      textEl.innerHTML = `<span class="briefing-word">Błąd: ${err}</span>`;
       return;
     }
     const data = await res.json();
@@ -1538,7 +1542,6 @@ async function requestBriefing() {
     briefingDuration = data.duration_seconds;
     briefingPausedAt = 0;
     renderBriefingWords(data.words);
-    showBriefingWidget();
 
     if (data.audio_base64) {
       briefingHasAudio = true;
@@ -1571,7 +1574,8 @@ async function requestBriefing() {
     }
   } catch (e) {
     console.error('Briefing fetch failed:', e);
-    alert('Nie udało się wygenerować briefingu.');
+    const textEl = document.getElementById('briefing-text');
+    textEl.innerHTML = '<span class="briefing-word">Nie udało się wygenerować briefingu.</span>';
   } finally {
     btn.disabled = false;
     btn.textContent = '📢';
