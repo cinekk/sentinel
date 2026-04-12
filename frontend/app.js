@@ -1453,6 +1453,64 @@ async function applyHospitalOverride() {
   }
 }
 
+// ── Flood scenario simulation ─────────────────────────────────────────────────
+
+let _floodSimRunning = false;
+let _floodSimInterval = null;
+
+async function fetchFloodScenarioState() {
+  try {
+    const res = await fetch(`${API}/api/flood-scenario/state`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+function updateFloodSimUI(state) {
+  if (!state) return;
+  const running = state.running;
+  _floodSimRunning = running;
+
+  const startBtn  = document.getElementById('flood-sim-start');
+  const stopBtn   = document.getElementById('flood-sim-stop');
+  const timeEl    = document.getElementById('flood-sim-time');
+  const progressEl = document.getElementById('flood-sim-progress');
+  const barEl     = document.getElementById('flood-sim-bar');
+  const tickLabel = document.getElementById('flood-sim-tick-label');
+
+  if (startBtn) startBtn.style.display = running ? 'none' : '';
+  if (stopBtn)  stopBtn.style.display  = running ? ''     : 'none';
+
+  if (running) {
+    if (timeEl)  { timeEl.textContent = state.narrative_label; timeEl.style.display = ''; }
+    if (progressEl) progressEl.style.display = '';
+    if (barEl)   barEl.style.width = `${Math.round((state.tick / state.max_tick) * 100)}%`;
+    if (tickLabel) tickLabel.textContent = `Tick ${state.tick} / ${state.max_tick}`;
+  } else {
+    if (timeEl)  timeEl.style.display = 'none';
+    if (progressEl) { progressEl.style.display = state.tick > 0 ? '' : 'none'; }
+    if (barEl && state.tick > 0) barEl.style.width = `${Math.round((state.tick / state.max_tick) * 100)}%`;
+    if (tickLabel && state.tick > 0) tickLabel.textContent = `Tick ${state.tick} / ${state.max_tick}`;
+  }
+}
+
+async function pollFloodScenario() {
+  const state = await fetchFloodScenarioState();
+  updateFloodSimUI(state);
+  if (state?.running) {
+    await refreshFloodTab();
+  }
+}
+
+function startFloodSimInterval() {
+  if (_floodSimInterval) return;
+  _floodSimInterval = setInterval(pollFloodScenario, 15_000);
+}
+
+function stopFloodSimInterval() {
+  if (_floodSimInterval) { clearInterval(_floodSimInterval); _floodSimInterval = null; }
+}
+
 function initFloodDashboard() {
   const refreshBtn = document.getElementById('flood-summary-refresh');
   if (refreshBtn) refreshBtn.addEventListener('click', async () => {
@@ -1463,6 +1521,39 @@ function initFloodDashboard() {
 
   const applyBtn = document.getElementById('flood-override-apply');
   if (applyBtn) applyBtn.addEventListener('click', applyHospitalOverride);
+
+  // Scenario control buttons
+  const startBtn = document.getElementById('flood-sim-start');
+  if (startBtn) startBtn.addEventListener('click', async () => {
+    const interval = parseInt(document.getElementById('flood-sim-interval')?.value ?? '15');
+    await fetch(`${API}/api/flood-scenario/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tick_interval_seconds: interval }),
+    });
+    startFloodSimInterval();
+    const state = await fetchFloodScenarioState();
+    updateFloodSimUI(state);
+    await refreshFloodTab();
+  });
+
+  const stopBtn = document.getElementById('flood-sim-stop');
+  if (stopBtn) stopBtn.addEventListener('click', async () => {
+    await fetch(`${API}/api/flood-scenario/stop`, { method: 'POST' });
+    stopFloodSimInterval();
+    const state = await fetchFloodScenarioState();
+    updateFloodSimUI(state);
+    await refreshFloodTab();
+  });
+
+  const resetBtn = document.getElementById('flood-sim-reset');
+  if (resetBtn) resetBtn.addEventListener('click', async () => {
+    await fetch(`${API}/api/flood-scenario/reset`, { method: 'POST' });
+    stopFloodSimInterval();
+    const state = await fetchFloodScenarioState();
+    updateFloodSimUI(state);
+    await refreshFloodTab();
+  });
 
   // Activate the hospitals-status and gauges layers when flood tab is opened
   document.querySelector('.stab[data-tab="flood"]')?.addEventListener('click', () => {
@@ -1495,6 +1586,11 @@ update112State();
 pollAlerts();
 refreshFloodTab();
 loadFloodSummary();
+// Sync scenario state on load (handles page refresh mid-simulation)
+fetchFloodScenarioState().then(state => {
+  updateFloodSimUI(state);
+  if (state?.running) startFloodSimInterval();
+});
 setInterval(refresh, 30_000);
 setInterval(updateSimState, 10_000);
 setInterval(update112State, 15_000);

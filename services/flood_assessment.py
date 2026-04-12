@@ -83,6 +83,34 @@ def clear_all_overrides() -> None:
     _cache_time = None
 
 
+async def set_hospital_override_by_city(city_name: str, patch: dict) -> int:
+    """Apply an override patch to all hospitals in the given city.
+
+    Returns the number of hospitals updated. Uses case-insensitive city match.
+    """
+    city_lower = city_name.lower()
+    try:
+        async with SessionLocal() as session:
+            result = await session.execute(select(HospitalRow))
+            rows = result.scalars().all()
+    except Exception as exc:
+        logger.error("set_hospital_override_by_city: DB error: %s", exc)
+        return 0
+
+    count = 0
+    for row in rows:
+        if (row.city or "").lower() == city_lower:
+            fid = row.facility_id or str(row.id)
+            set_hospital_override(fid, patch)
+            count += 1
+
+    if count == 0:
+        logger.warning("set_hospital_override_by_city: no hospitals found for city=%r", city_name)
+    else:
+        logger.info("set_hospital_override_by_city: patched %d hospitals in %s", count, city_name)
+    return count
+
+
 # ---------------------------------------------------------------------------
 # Assessment logic
 # ---------------------------------------------------------------------------

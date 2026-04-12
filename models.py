@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Union
 from pydantic import BaseModel, Field
 
 
@@ -169,3 +169,40 @@ class BriefingResponse(BaseModel):
     words: list[BriefingWordTiming]
     text: str
     duration_seconds: float
+
+
+# --- Flood Scenario Script models ---
+
+class GaugeOverrideAct(BaseModel):
+    act: Literal["gauge_override"] = "gauge_override"
+    near_lat: float        # coordinate-based lookup — find nearest gauge
+    near_lon: float
+    level: Literal["normal", "warning", "alarm"]
+
+
+class InjectEventsAct(BaseModel):
+    act: Literal["inject_events"] = "inject_events"
+    n: int
+    lat: float
+    lon: float
+    radius_km: float = 2.0
+    category: str = "medical"
+    severity: str = "high"
+
+
+class HospitalOverrideAct(BaseModel):
+    act: Literal["hospital_override"] = "hospital_override"
+    city: str              # e.g. "Puławy" — applies to all hospitals in that city
+    generator_state: str | None = None   # "ok" | "degraded" | "offline"
+    personnel_pct: int | None = None
+    road_cut: bool | None = None
+
+
+class CrisisEventAct(BaseModel):
+    act: Literal["crisis_event"] = "crisis_event"
+    action: Literal["create", "patch", "resolve"]
+    crisis_id: str | None = None   # required for patch/resolve
+    event_kwargs: dict = {}
+
+
+ScriptAct = Union[GaugeOverrideAct, InjectEventsAct, HospitalOverrideAct, CrisisEventAct]

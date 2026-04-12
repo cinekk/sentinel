@@ -66,6 +66,46 @@ def clear_gauge_override(station_id: str) -> None:
     _overrides.pop(station_id, None)
 
 
+def clear_all_gauge_overrides() -> None:
+    """Remove all gauge overrides (called by flood scenario reset)."""
+    _overrides.clear()
+
+
+def set_gauge_override_by_location(lat: float, lon: float, level: AlertLevel, max_km: float = 80.0) -> str | None:
+    """Find the nearest cached gauge to (lat, lon) and override its alert level.
+
+    Returns the station_id that was overridden, or None if no gauge was found in cache.
+    """
+    if _cache is None:
+        return None
+
+    def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        from math import radians, sin, cos, sqrt, atan2
+        R = 6371.0
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+        return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    best_sid: str | None = None
+    best_dist = float("inf")
+    for feat in _cache.get("features", []):
+        clat = feat["geometry"]["coordinates"][1]
+        clon = feat["geometry"]["coordinates"][0]
+        d = _haversine(lat, lon, clat, clon)
+        if d < best_dist:
+            best_dist = d
+            best_sid = feat["properties"].get("id")
+
+    if best_sid and best_dist <= max_km:
+        set_gauge_override(best_sid, level)
+        logger.info("Gauge override: station %s → %s (%.1f km away)", best_sid, level, best_dist)
+        return best_sid
+
+    logger.warning("No gauge found within %.0f km of (%.4f, %.4f)", max_km, lat, lon)
+    return None
+
+
 def get_overrides() -> dict[str, AlertLevel]:
     return dict(_overrides)
 
