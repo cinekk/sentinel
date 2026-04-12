@@ -63,6 +63,12 @@ async def chat_completion(
         resp.raise_for_status()
 
     data = resp.json()
+
+    if "choices" not in data or not data["choices"]:
+        err = data.get("error", {})
+        logger.error("OpenRouter API error: %s | full: %s", err.get("message", data), data)
+        raise ValueError(f"OpenRouter error: {err.get('message', 'no choices returned')}")
+
     choice = data["choices"][0]
     message = choice["message"]
     content = message.get("content") or ""
