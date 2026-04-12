@@ -53,6 +53,9 @@
 .reveal .slides section {
   text-align: left;
   padding: 40px 60px;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
 }
 
 /* ── Typography ─────────────────────────────────────────────────────────────── */
