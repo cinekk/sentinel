@@ -56,6 +56,9 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 | 10 — Flood Scenario Simulation Engine | [PHASE-10-flood-simulation.md](PHASE-10-flood-simulation.md) | ✅ Done |
 | 11 — Fire Redesign + UI Unification | [PHASE-11-fire-redesign.md](PHASE-11-fire-redesign.md) | 🔲 Not started |
 | 11b — Hospital Layer UX + Transfer Recommendations | [PHASE-11-hospital-ux.md](PHASE-11-hospital-ux.md) | ✅ Done |
+| 11c — Hospital Override Modal + School Dedup | *(PR #26)* | ✅ Done |
+| 12 — Evacuation Command Window (Transport Sanitarny) | [PHASE-12-evacuation-command.md](PHASE-12-evacuation-command.md) | 🔲 Not started |
+| 13 — Auto-Demo / Cinematic Tour + TTS | [PHASE-13-autodemo-tour.md](PHASE-13-autodemo-tour.md) | 🔲 Not started |
 
 ---
 
