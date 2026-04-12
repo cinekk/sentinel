@@ -170,6 +170,27 @@
     <!-- Panel: Flood / Zestaw A -->
     <div class="tab-panel tab-panel--flood" data-panel="flood">
 
+      <!-- Scenario control -->
+      <div class="flood-section">
+        <div class="flood-section-header">
+          <span class="section-label">Symulacja — Powódź Puławy</span>
+          <span id="flood-sim-time" class="flood-sim-time" style="display:none"></span>
+        </div>
+        <div class="flood-sim-controls">
+          <button id="flood-sim-start" class="sim-btn primary">▶ Start</button>
+          <button id="flood-sim-stop" class="sim-btn" style="display:none">■ Stop</button>
+          <button id="flood-sim-reset" class="sim-btn">↺ Reset</button>
+          <label class="flood-override-label" style="margin-left:auto;align-items:center;gap:4px">
+            Tempo (s/tick)
+            <input type="number" id="flood-sim-interval" class="flood-input-sm" min="2" max="60" value="15" style="width:48px" />
+          </label>
+        </div>
+        <div id="flood-sim-progress" class="flood-sim-progress" style="display:none">
+          <div class="flood-sim-bar-bg"><div id="flood-sim-bar" class="flood-sim-bar"></div></div>
+          <span id="flood-sim-tick-label" class="flood-sim-tick-label">Tick 0 / 12</span>
+        </div>
+      </div>
+
       <!-- AI situation summary -->
       <div class="flood-section">
         <div class="flood-section-header">

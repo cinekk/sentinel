@@ -12,6 +12,7 @@ from plugins.gios import GIOSPlugin
 from plugins.imgw_hydro import IMGWHydroPlugin
 from plugins.mock_boundary import MockBoundaryPlugin, EventsPlugin
 from plugins.resources import FireStationsPlugin, HospitalsPlugin, HospitalStatusPlugin, SchoolsPlugin, SocialPlugin
+from plugins.flood_scenario import FloodScenarioPlugin
 from plugins.simulation import SimulationPlugin
 from routers.assistant import router as assistant_router
 from routers.crisis import router as crisis_router
@@ -19,6 +20,7 @@ from routers.emergency_calls import router as emergency_router
 from routers.events import router as events_router
 from routers.fires_compat import router as fires_compat_router
 from routers.flood import router as flood_router
+from routers.flood_scenario import router as flood_scenario_router
 from routers.layers import router as layers_router
 from routers.resources import router as resources_router
 from routers.simulation import router as simulation_router
@@ -42,6 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     registry.register(GIOSPlugin())
     registry.register(IMGWHydroPlugin())
     registry.register(HospitalStatusPlugin())
+    registry.register(FloodScenarioPlugin())
     yield
 
 
@@ -65,6 +68,7 @@ app.include_router(v1_layers_router)
 app.include_router(assistant_router)
 app.include_router(voice_router)
 app.include_router(flood_router)
+app.include_router(flood_scenario_router)
 
 
 @app.get("/api/health")
