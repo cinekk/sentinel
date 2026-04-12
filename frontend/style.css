@@ -777,6 +777,145 @@ header .subtitle {
 #alert-hud .hud-header:hover .hud-expand-hint { color: var(--amber); }
 #alert-hud.has-critical .hud-header:hover .hud-expand-hint { color: var(--red); }
 
+/* ── Evacuation command panel ────────────────────────────────────────────────── */
+
+.flood-evac-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.evac-card {
+  background: var(--bg-lift);
+  border: 1px solid var(--border-dim);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.evac-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,.02);
+  border-bottom: 1px solid var(--border-dim);
+  flex-wrap: wrap;
+}
+
+.evac-priority {
+  font-family: var(--font-mono);
+  font-size: .5rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 2px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.evac-priority--NATYCHMIASTOWE { background: var(--red-glow);           border: 1px solid var(--red-border);           color: var(--red); }
+.evac-priority--PILNE          { background: var(--amber-glow);         border: 1px solid var(--amber-border);         color: var(--amber); }
+.evac-priority--PLANOWE        { background: rgba(59,130,246,.15);      border: 1px solid rgba(59,130,246,.4);         color: var(--blue); }
+
+.evac-hosp-name {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  color: var(--text-hi);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evac-transfer-target {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  color: var(--amber);
+  white-space: nowrap;
+}
+
+.evac-body {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evac-patient-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: .6rem;
+}
+.evac-patient-table th {
+  color: var(--text-mid);
+  font-weight: 400;
+  text-align: left;
+  padding: 1px 4px;
+  border-bottom: 1px solid var(--border-dim);
+}
+.evac-patient-table td { padding: 2px 4px; color: var(--text-hi); vertical-align: middle; }
+.evac-patient-table tr:not(:last-child) td { border-bottom: 1px solid rgba(255,255,255,.03); }
+
+.evac-type-badge {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.evac-type-S { background: var(--red-glow);          border: 1px solid var(--red-border);       color: var(--red); }
+.evac-type-N { background: rgba(168,85,247,.15);     border: 1px solid rgba(168,85,247,.4);     color: #a855f7; }
+.evac-type-P { background: var(--amber-glow);        border: 1px solid var(--amber-border);     color: var(--amber); }
+.evac-type-T { background: rgba(110,146,180,.12);    border: 1px solid rgba(110,146,180,.3);    color: var(--text-mid); }
+
+.evac-units-header {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 2px;
+}
+
+.evac-units-list { display: flex; flex-direction: column; gap: 2px; }
+
+.evac-unit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  color: var(--text-hi);
+}
+
+.evac-unit-status {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.evac-unit-status--available   { background: var(--green);  box-shadow: 0 0 4px var(--green); }
+.evac-unit-status--en_route    { background: var(--amber);  box-shadow: 0 0 4px var(--amber); }
+.evac-unit-status--unavailable { background: #4b5563; }
+
+.evac-unit-callsign { color: var(--text-mid); flex: 1; }
+.evac-unit-dist     { color: var(--text-mid); white-space: nowrap; }
+.evac-unit-eta      { color: var(--amber); white-space: nowrap; min-width: 44px; text-align: right; }
+
+.evac-deficit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--red-glow);
+  border: 1px solid var(--red-border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  color: var(--red);
+}
+
 /* ── Hospital override modal ─────────────────────────────────────────────────── */
 
 .override-modal-backdrop {

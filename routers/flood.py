@@ -20,6 +20,7 @@ from services.flood_assessment import (
     set_hospital_override,
 )
 from services.openrouter import chat_completion
+from services.evacuation import HospitalEvacOrder, get_evacuation_dispatch
 from services.transfer import TransferRecommendation, get_transfer_recommendations
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,25 @@ async def get_flood_assessment() -> list[HospitalFloodStatus]:
 @router.get("/flood/transfer-recommendations", response_model=list[TransferRecommendation])
 async def get_transfer_recs() -> list[TransferRecommendation]:
     return await get_transfer_recommendations()
+
+
+# ---------------------------------------------------------------------------
+# GET /api/flood/evacuation-dispatch
+# ---------------------------------------------------------------------------
+
+@router.get("/flood/evacuation-dispatch", response_model=list[HospitalEvacOrder])
+async def get_evacuation_dispatch_endpoint() -> list[HospitalEvacOrder]:
+    statuses = await assess_hospitals()
+    # Build transfer_map from transfer recommendations
+    try:
+        recs = await get_transfer_recommendations()
+        transfer_map = {
+            r.from_hospital_id: r.targets[0].short_name
+            for r in recs if r.targets
+        }
+    except Exception:
+        transfer_map = {}
+    return get_evacuation_dispatch(statuses, transfer_map)
 
 
 # ---------------------------------------------------------------------------
