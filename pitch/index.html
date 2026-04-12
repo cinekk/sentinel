@@ -102,7 +102,7 @@
     <li><strong>Dynamiczne od&sacute;wie&zdot;anie</strong> &mdash; dane z GIO&Sacute; aktualizowane co godzin&eogon;, symulacja co 30 sekund</li>
     <li><strong>Filtry i selekcja</strong> &mdash; klikni&eogon;cie na powiat/gmin&eogon; filtruje dane</li>
     <li><strong>Responsywny UI</strong> &mdash; du&zdot;y monitor w sali konferencyjnej lub tablet</li>
-    <li><strong>Case study ZESTAW&nbsp;D</strong> &mdash; po&zdot;ar przemys&lstrok;owy, pe&lstrok;na symulacja z timeline</li>
+    <li><strong>Dwa scenariusze kryzysowe</strong> &mdash; po&zdot;ar przemys&lstrok;owy i pow&oacute;d&zacute; z kryzysem medycznym</li>
   </ul>
 </section>
 
@@ -322,7 +322,157 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     10. DATA DEPENDENCIES
+     10. CASE STUDY: ZESTAW A — FLOOD
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Case Study: Kryzys powodziowy</h2>
+  <p style="font-size:0.58em; color:var(--text-mid); margin-bottom:0.6em;">
+    ZESTAW A &mdash; Kryzys medyczny w warunkach powodzi: Wis&lstrok;a, okolice Pu&lstrok;aw
+  </p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <span class="t-time">T+0</span> &mdash; Wis&lstrok;a w Pu&lstrok;awach: stan ostrzegawczy.
+      SENTINEL pobiera dane z IMGW i nak&lstrok;ada strefy zagro&zdot;enia ISOK
+    </div>
+    <div class="timeline-item">
+      <span class="t-time">T+20 min</span> &mdash; Pierwsze zg&lstrok;oszenia 112: zawa&lstrok;y, hipotermia,
+      podtopienia piwnicy. ZRM Pu&lstrok;awy wys&lstrok;ane
+    </div>
+    <div class="timeline-item critical">
+      <span class="t-time">T+40 min</span> &mdash; Poziom alarmowy. Szpital Powiatowy Pu&lstrok;awy:
+      generator w trybie awaryjnym. Drogi dojazdowe zablokowane
+    </div>
+    <div class="timeline-item critical">
+      <span class="t-time">T+1h</span> &mdash; SENTINEL: szpital &bdquo;do ewakuacji&rdquo; &mdash;
+      280&nbsp;&lstrok;&oacute;&zdot;ek, 58 krytycznych pacjent&oacute;w, generator offline
+    </div>
+    <div class="timeline-item critical">
+      <span class="t-time">T+1h 10min</span> &mdash; Zg&lstrok;oszenia 112 bez odpowiedzi ZRM &mdash;
+      sektory W&lstrok;odawa i Hrubiesz&oacute;w odci&eogon;te
+    </div>
+    <div class="timeline-item">
+      <span class="t-time">T+2h</span> &mdash; AI rekomenduje przekierowanie do Szpitala w Lublinie
+      (310 wolnych &lstrok;&oacute;&zdot;ek, SOR operacyjny). Stabilizacja
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     11. INFRASTRUKTURA MEDYCZNA
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Infrastruktura medyczna</h2>
+
+  <div class="two-col">
+    <div>
+      <div class="stat-grid" style="grid-template-columns: 1fr 1fr; gap:10px;">
+        <div class="stat-card">
+          <span class="stat-value" style="font-size:1.8em;">39</span>
+          <span class="stat-label">szpitali w bazie</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" style="font-size:1.8em;">18</span>
+          <span class="stat-label">z SOR</span>
+        </div>
+      </div>
+      <ul style="margin-top:0.4em;">
+        <li>&Lstrok;&oacute;&zdot;ka, OIT/OIOM, respiratory, ECMO</li>
+        <li>Generatory awaryjne, helipad, CT 24/7</li>
+        <li>Specjalizacje, dializy, izolacja</li>
+        <li>NFZ + TERYT + kontakt 24h</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="font-size:0.8em;">Zale&zdot;no&sacute;ci &mdash; ZESTAW A</h3>
+      <table style="font-size:0.55em; width:100%; border-collapse:separate; border-spacing:0 6px;">
+        <tr>
+          <td style="color:var(--text-hi);">IMGW rzeki + ISOK strefy</td>
+          <td style="color:var(--text-dim); text-align:center; width:30px;">&rarr;</td>
+          <td style="color:var(--amber); font-weight:600;">Szpitale zagro&zdot;one</td>
+        </tr>
+        <tr>
+          <td style="color:var(--text-hi);">Zg&lstrok;oszenia 112 + pojemno&sacute;&cacute;</td>
+          <td style="color:var(--text-dim); text-align:center;">&rarr;</td>
+          <td style="color:var(--amber); font-weight:600;">Przeci&aogon;&zdot;enie</td>
+        </tr>
+        <tr>
+          <td style="color:var(--text-hi);">Generator + drogi</td>
+          <td style="color:var(--text-dim); text-align:center;">&rarr;</td>
+          <td style="color:var(--amber); font-weight:600;">Ewakuacja</td>
+        </tr>
+      </table>
+
+      <div class="highlight-box" style="margin-top:0.5em; font-size:0.8em;">
+        Ka&zdot;dy szpital = punkt na mapie z pe&lstrok;nym profilem.
+        Krzy&zdot;owanie z danymi powodziowymi i 112 daje <strong>decyzj&eogon;</strong>, nie surowe dane.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     12. ZG&Lstrok;OSZENIA 112
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Zg&lstrok;oszenia 112</h2>
+
+  <p style="font-size:0.6em; color:var(--text-mid); margin-bottom:0.5em;">
+    Symulacja dyspozytorni &mdash; 6 faz eskalacji kryzysu powodziowego
+  </p>
+
+  <div class="stat-grid" style="grid-template-columns: repeat(6, 1fr); gap:8px;">
+    <div class="stat-card" style="padding:10px;">
+      <span class="stat-value" style="font-size:1.2em;">0</span>
+      <span class="stat-label" style="font-size:0.7em;">norma</span>
+    </div>
+    <div class="stat-card" style="padding:10px;">
+      <span class="stat-value" style="font-size:1.2em;">1</span>
+      <span class="stat-label" style="font-size:0.7em;">rzeka</span>
+    </div>
+    <div class="stat-card" style="padding:10px;">
+      <span class="stat-value" style="font-size:1.2em;">2</span>
+      <span class="stat-label" style="font-size:0.7em;">blokady</span>
+    </div>
+    <div class="stat-card" style="padding:10px; border-color:var(--amber-border);">
+      <span class="stat-value" style="font-size:1.2em; color:var(--amber);">3</span>
+      <span class="stat-label" style="font-size:0.7em;">ewakuacja</span>
+    </div>
+    <div class="stat-card" style="padding:10px; border-color:rgba(239,68,68,.4);">
+      <span class="stat-value" style="font-size:1.2em; color:var(--red);">4</span>
+      <span class="stat-label" style="font-size:0.7em;">szpitale</span>
+    </div>
+    <div class="stat-card" style="padding:10px; border-color:rgba(239,68,68,.4);">
+      <span class="stat-value" style="font-size:1.2em; color:var(--red);">5</span>
+      <span class="stat-label" style="font-size:0.7em;">brak ZRM</span>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <ul>
+        <li>12 lokalizacji wzd&lstrok;u&zdot; Wis&lstrok;y, Wieprza, Bugu</li>
+        <li>Kategorie: medyczne, powodziowe, inne</li>
+        <li>Jednostki ZRM z realistycznymi kodami</li>
+        <li>Eskalacja: od rutyny po odci&eogon;te sektory</li>
+      </ul>
+    </div>
+    <div>
+      <div class="highlight-box crisis" style="font-size:0.85em;">
+        <span style="font-family:var(--font-mono); color:var(--red); font-size:0.85em;">FAZA 5</span><br>
+        &bdquo;Zawa&lstrok; serca &middot; zg&lstrok;oszenie przyj&eogon;te &middot;
+        <strong>brak ZRM w sektorze</strong> &mdash; drogi odci&eogon;te&rdquo;
+      </div>
+      <p style="font-size:0.52em; color:var(--text-dim); margin-top:0.4em;">
+        Na mapie: pulsuj&aogon;ce markery &bdquo;bez ZRM&rdquo; &mdash;
+        jury widzi rozpadaj&aogon;cy si&eogon; system
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     13. DATA DEPENDENCIES
      ═══════════════════════════════════════════════════════════════════════════ -->
 <section>
   <h2>Zale&zdot;no&sacute;ci mi&eogon;dzy danymi</h2>
