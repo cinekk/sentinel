@@ -8,24 +8,23 @@
 
 ## 1. Wybór modelu (open-weights)
 
-### Rekomendacja: Qwen3 235B-A22B Instruct 2507 via OpenRouter
+### Rekomendacja: Qwen3 8B via OpenRouter + Structured Output
 
 | Model | Parametry | Cena (input/output) | JSON output | Polski | Latencja |
 |-------|-----------|---------------------|-------------|--------|----------|
-| **Qwen3 235B-A22B-2507** | 235B/22B active | $0.07/$0.10/M tok | 0.31% error | 201 języków | ~2-6s |
-| Qwen3 8B (04-28) | 8.2B | $0.05/$0.40/M tok | niedokładny* | 100+ języków | ~1-3s |
+| **Qwen3 8B** | 8.2B | $0.05/$0.40/M tok | json_schema ✓ | 100+ języków | ~3-7s |
+| Qwen3 235B-A22B-2507 | 235B/22B active | $0.07/$0.10/M tok | json_object ✓ | 201 języków | ~2-6s |
 | DeepSeek V3.2 | 671B/37B active | $0.26/$0.38/M tok | 0.51% error | ~30 języków | ~2-4s |
 | Llama 4 Maverick | 400B/17B active | $0.15/$0.60/M tok | brak danych | 200 języków | ~2-3s |
 
-*Qwen3 8B (jedyna dostępna wersja 04-28) ignoruje instrukcje layers_visible/hidden — nie nadaje się do sterowania widokiem.
+**UWAGA:** Qwen3 8B z `response_format: json_object` zwraca `content: null`. Rozwiązanie: `json_schema` (structured output) z enum-constrained layer IDs → model NIE MOŻE wymyślić niepoprawnych nazw warstw.
 
-**Dlaczego Qwen3 235B Instruct 2507:**
-- Najlepszy multilingual benchmark (87.5% na 29 językach) — krytyczne dla polskich promptów
-- Najniższy structured output error rate (0.31%)
+**Dlaczego Qwen3 8B + structured output:**
 - Licencja Apache 2.0 (open-weights — dodatkowe punkty konkursowe)
-- Koszt ~$0.07/M input — przy ~2000 tokenów kontekstu to <$0.001 per request
-- Wersja 2507 poprawnie obsługuje `response_format: json_object` bez artefaktów thinking
-- `/no_think` prefix wyłącza reasoning → szybsza odpowiedź (~2-4s), czysty JSON
+- Niski koszt: $0.05/$0.40 per M tokenów
+- `json_schema` z `strict: true` + enum na layer_id → model zwraca TYLKO prawidłowe nazwy warstw
+- Thinking mode (domyślny) — model rozumuje wewnętrznie, zwraca czysty JSON
+- Przetestowane: "pokaż tylko szpitale", "ukryj szkoły" → poprawne odpowiedzi ~3-7s
 
 **Fallback:** Keyword-based heurystyka (zaimplementowana w `_fallback_config`) gdy OpenRouter niedostępny.
 
@@ -50,7 +49,7 @@ frontend/style.css        — Stylizacja ops-center
 1. Użytkownik opisuje sytuację w chacie
 2. Frontend → `POST /api/assistant/configure-view` z query
 3. Backend buduje system prompt z katalogiem warstw/atrybutów
-4. OpenRouter (Qwen3 235B, /no_think) → JSON ViewConfig
+4. OpenRouter (Qwen3 8B, json_schema structured output) → JSON ViewConfig
 5. Frontend `applyViewConfig()` → programowo przełącza warstwy, filtruje popupy, ustawia critical attribute
 
 ### Kontrakt ViewConfig
@@ -142,5 +141,5 @@ tools:
 2. **Persystencja widoku:** Czy konfiguracja widoku powinna być zapisywalna (np. "widok kryzysowy pożar", "widok codzienny smog")?
 3. **Multi-turn:** Czy asystent ma pamiętać kontekst rozmowy (np. "teraz pokaż mi jeszcze szkoły"), czy każde zapytanie jest niezależne?
 4. **Język:** Interfejs po polsku — czy asystent też musi odpowiadać po polsku? (Obecnie: tak, wymuszony w system prompt)
-5. **Latencja:** Jakie jest akceptowalne opóźnienie odpowiedzi asystenta? (Obecne ~2-4s z Qwen3 235B /no_think na OpenRouter)
+5. **Latencja:** Jakie jest akceptowalne opóźnienie odpowiedzi asystenta? (Obecne ~3-7s z Qwen3 8B + thinking na OpenRouter)
 6. **Scoring konkursowy:** Ile punktów za open-weights? Czy Ollama fallback też się liczy, czy musi być primary?

@@ -2,10 +2,12 @@
 AI Assistant service — translates natural-language situational descriptions
 into dashboard view configurations (which layers to show, which attributes
 to display in popups, and which numeric attribute to use for color-coding).
+
+Uses json_schema structured output so the LLM is constrained to valid
+layer IDs (enum) and the correct response shape.
 """
 from __future__ import annotations
 
-import json
 import logging
 
 from services.layer_meta import get_all_schemas, LayerSchema
@@ -32,6 +34,55 @@ def _build_layer_catalog(schemas: list[LayerSchema]) -> str:
     return "\n\n".join(parts)
 
 
+def _build_view_config_schema(layer_ids: list[str]) -> dict:
+    """Build a JSON Schema for ViewConfig with layer IDs as enum."""
+    layer_enum = {"type": "string", "enum": layer_ids}
+    return {
+        "name": "view_config",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "layers_visible": {
+                    "type": "array",
+                    "items": layer_enum,
+                },
+                "layers_hidden": {
+                    "type": "array",
+                    "items": layer_enum,
+                },
+                "popup_attributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                },
+                "critical_attribute_layer_id": {
+                    "type": ["string", "null"],
+                },
+                "critical_attribute_key": {
+                    "type": ["string", "null"],
+                },
+                "critical_attribute_label": {
+                    "type": ["string", "null"],
+                },
+                "explanation": {"type": "string"},
+            },
+            "required": [
+                "layers_visible",
+                "layers_hidden",
+                "popup_attributes",
+                "critical_attribute_layer_id",
+                "critical_attribute_key",
+                "critical_attribute_label",
+                "explanation",
+            ],
+            "additionalProperties": False,
+        },
+    }
+
+
 SYSTEM_PROMPT = """\
 Jesteś asystentem AI platformy SENTINEL — systemu świadomości sytuacyjnej dla województwa lubelskiego.
 
@@ -43,44 +94,19 @@ Twoim zadaniem jest konfiguracja widoku dashboardu na podstawie opisu sytuacji k
 
 ## Zasady
 
-1. Na podstawie opisu sytuacji wybierz RELEWANTNE warstwy (layers_visible) i ukryj pozostałe (layers_hidden).
+1. Na podstawie opisu sytuacji wybierz RELEWANTNE warstwy (layers_visible) i ukryj pozostałe (layers_hidden). Każda warstwa MUSI być albo w layers_visible albo layers_hidden.
 2. Dla każdej widocznej warstwy z atrybutami, wybierz 3-8 NAJWAŻNIEJSZYCH atrybutów do popup_attributes. Zawsze uwzględnij "name".
-3. Jeśli sytuacja wymaga wizualizacji numerycznej (np. dostępne łóżka, pojemność), ustaw critical_attribute z progami kolorów.
-4. Progi (thresholds) to lista obiektów {{"value": <max>, "color": "<hex>"}} posortowana rosnąco. Ostatni próg bez value to kolor domyślny (powyżej najwyższego progu). Kolory: czerwony #ef4444 (krytycznie mało), pomarańczowy #f97316 (mało), zielony #10b981 (ok).
-5. Odpowiadaj WYŁĄCZNIE po polsku.
-6. explanation — krótkie (1-2 zdania) wyjaśnienie dlaczego taki widok.
+3. Jeśli sytuacja wymaga wizualizacji numerycznej (np. dostępne łóżka, pojemność), ustaw critical_attribute_layer_id, critical_attribute_key i critical_attribute_label. W przeciwnym razie ustaw je na null.
+4. Odpowiadaj WYŁĄCZNIE po polsku w polu explanation.
+5. explanation — krótkie (1-2 zdania) wyjaśnienie dlaczego taki widok.
 
 ## Scenariusze referencyjne
 
-- Pożar/HAZMAT: szpitale (łóżka, SOR, OIT), straż, symulacja, granica. Critical: beds_available_estimate lub icu_oiom_beds.
-- Smog/jakość powietrza: symulacja (PM2.5), szkoły, DPS, szpitale. Critical: pm25 lub capacity.
-- Powódź: szpitale, szkoły, DPS, straż, granica. Critical: beds_available_estimate.
-- Codzienny przegląd: szpitale, szkoły, DPS, straż, granica. Bez critical_attribute.
-- Ewakuacja: DPS (pojemność, łóżka), szpitale (łóżka, SOR), straż. Critical: capacity lub beds.
-
-## Format odpowiedzi
-
-Odpowiedz WYŁĄCZNIE prawidłowym JSON:
-{{
-  "layers_visible": ["layer_id", ...],
-  "layers_hidden": ["layer_id", ...],
-  "popup_attributes": {{
-    "layer_id": ["attr_key", ...]
-  }},
-  "critical_attribute": {{
-    "layer_id": "...",
-    "attribute": "...",
-    "thresholds": [
-      {{"value": 10, "color": "#ef4444"}},
-      {{"value": 50, "color": "#f97316"}},
-      {{"color": "#10b981"}}
-    ],
-    "label": "Czytelna nazwa"
-  }},
-  "explanation": "..."
-}}
-
-Jeśli critical_attribute nie jest potrzebny, ustaw null.
+- "pokaż tylko szpitale" → layers_visible: ["hospitals"], layers_hidden: wszystkie pozostałe
+- "ukryj szkoły" → layers_hidden: ["schools"], layers_visible: wszystkie pozostałe
+- Pożar/HAZMAT: szpitale, straż, symulacja, granica. Critical: beds_available_estimate.
+- Smog: jakość powietrza, szkoły, DPS, szpitale.
+- Powódź: szpitale, szkoły, DPS, straż, granica.
 """
 
 
@@ -92,9 +118,12 @@ async def configure_view(query: str, crisis_context: str | None = None) -> dict:
     catalog = _build_layer_catalog(schemas)
     system = SYSTEM_PROMPT.format(layer_catalog=catalog)
 
-    user_msg = f"/no_think\n{query}"
+    layer_ids = [s.layer_id for s in schemas]
+    view_schema = _build_view_config_schema(layer_ids)
+
+    user_msg = query
     if crisis_context:
-        user_msg = f"/no_think\n{query}\n\nAktywny kontekst kryzysowy: {crisis_context}"
+        user_msg = f"{query}\n\nAktywny kontekst kryzysowy: {crisis_context}"
 
     messages = [
         {"role": "system", "content": system},
@@ -102,7 +131,9 @@ async def configure_view(query: str, crisis_context: str | None = None) -> dict:
     ]
 
     try:
-        result = await chat_completion(messages, temperature=0.2, max_tokens=2048)
+        result = await chat_completion(
+            messages, temperature=0.2, max_tokens=2048, json_schema=view_schema,
+        )
     except Exception:
         logger.exception("OpenRouter call failed, returning fallback config")
         return _fallback_config(query)
@@ -131,19 +162,20 @@ def _validate_and_normalize(raw: dict, schemas: list[LayerSchema]) -> dict:
         if lid in all_ids and isinstance(attrs, list):
             popup_attrs[lid] = attrs
 
-    critical = raw.get("critical_attribute")
-    if critical and isinstance(critical, dict):
-        if critical.get("layer_id") not in all_ids:
-            critical = None
-        elif not critical.get("attribute"):
-            critical = None
-        else:
-            if "thresholds" not in critical or not critical["thresholds"]:
-                critical["thresholds"] = [
-                    {"value": 10, "color": "#ef4444"},
-                    {"value": 50, "color": "#f97316"},
-                    {"color": "#10b981"},
-                ]
+    critical = None
+    crit_layer = raw.get("critical_attribute_layer_id")
+    crit_key = raw.get("critical_attribute_key")
+    if crit_layer and crit_key and crit_layer in all_ids:
+        critical = {
+            "layer_id": crit_layer,
+            "attribute": crit_key,
+            "thresholds": [
+                {"value": 10, "color": "#ef4444"},
+                {"value": 50, "color": "#f97316"},
+                {"color": "#10b981"},
+            ],
+            "label": raw.get("critical_attribute_label") or crit_key,
+        }
 
     model_used = raw.get("_model", "unknown")
 
