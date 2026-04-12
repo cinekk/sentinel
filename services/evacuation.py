@@ -70,24 +70,25 @@ class HospitalEvacOrder(BaseModel):
 
 # ── Unit pool generation ──────────────────────────────────────────────────────
 
-def _generate_unit_pool(hospitals: list[HospitalFloodStatus]) -> list[dict]:
+def generate_unit_pool(bases: list[dict]) -> list[dict]:
     """
     Generate a deterministic, spatially realistic pool of transport units.
-    Uses hospital coordinates as bases with small geographic offsets.
-    SOR hospitals generate 2 units; others generate 1.
+
+    bases: list of dicts with keys: lat, lon, sor (bool).
+    SOR bases generate 2 units; others generate 1.
     ~10% of units are randomly marked unavailable.
     """
     rng = random.Random(42)
     units: list[dict] = []
     idx = 0
 
-    for h in hospitals:
-        n = 2 if h.sor else 1
+    for b in bases:
+        n = 2 if b.get("sor") else 1
         for _ in range(n):
             unit_type = _TYPE_CYCLE[idx % len(_TYPE_CYCLE)]
             idx += 1
-            lat = h.lat + rng.uniform(-0.05, 0.05)
-            lon = h.lon + rng.uniform(-0.08, 0.08)
+            lat = b["lat"] + rng.uniform(-0.05, 0.05)
+            lon = b["lon"] + rng.uniform(-0.08, 0.08)
             uid = f"LU-{unit_type}-{idx:02d}"
             status = "unavailable" if rng.random() < 0.10 else "available"
             units.append({
@@ -100,6 +101,13 @@ def _generate_unit_pool(hospitals: list[HospitalFloodStatus]) -> list[dict]:
             })
 
     return units
+
+
+# Keep internal alias used by get_evacuation_dispatch
+def _generate_unit_pool(hospitals: list[HospitalFloodStatus]) -> list[dict]:
+    return generate_unit_pool([
+        {"lat": h.lat, "lon": h.lon, "sor": h.sor} for h in hospitals
+    ])
 
 
 def _eta(distance_km: float, unit_type: str) -> int:

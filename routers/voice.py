@@ -11,9 +11,24 @@ from services.briefing import BriefingContext, generate_briefing_text
 from services.spatial import facilities_in_zones
 from services.tts import synthesize_with_timestamps
 
+from pydantic import BaseModel
+
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
+
+
+class SpeakRequest(BaseModel):
+    text: str
+
+
+@router.post("/speak")
+async def speak(body: SpeakRequest) -> dict:
+    """Synthesize plain text to MP3 and return as base64. Used by the demo controller."""
+    if not body.text.strip():
+        raise HTTPException(status_code=422, detail="text is empty")
+    result = await synthesize_with_timestamps(body.text)
+    return {"audio_base64": result.audio_base64}
 
 
 async def _load_resource_features() -> list[dict]:

@@ -148,10 +148,11 @@ const CATEGORY_ICON = {
 };
 
 const RESOURCE_ICON = {
-  hospital:     '🏥',
-  school:       '🏫',
-  social:       '🏠',
-  fire_station: '🚒',
+  hospital:       '🏥',
+  school:         '🏫',
+  social:         '🏠',
+  fire_station:   '🚒',
+  transport_unit: '🚑',
 };
 
 const BEARING_LABELS = { 0:'N', 45:'NE', 90:'E', 135:'SE', 180:'S', 225:'SW', 270:'W', 315:'NW' };
@@ -2169,6 +2170,181 @@ async function refreshFloodTab() {
   await fetchAndRenderLayer('hospitals-status');
   await loadEvacuationDispatch();
 }
+
+// ── Demo controller ───────────────────────────────────────────────────────────
+
+const DemoController = (() => {
+  const STEPS = [
+    // { delay_ms, fn }  — delays are relative to previous step
+    { delay: 0,    fn: '_switchToFlood'   },
+    { delay: 500,  fn: '_startSim'        },
+    { delay: 800,  fn: '_speakAlert1'     },
+    { delay: 1500, fn: '_panMap'          },
+    { delay: 6000, fn: '_calloutGauges'   },
+    { delay: 10000,fn: '_calloutHospitals'},
+    { delay: 10000,fn: '_calloutEvac'     },
+    { delay: 12000,fn: '_finish'          },
+  ];
+
+  let _timers = [];
+  let _active  = false;
+  let _countdownTimer = null;
+  let _highlightEl = null;
+
+  function _schedule(steps) {
+    let elapsed = 0;
+    for (const s of steps) {
+      elapsed += s.delay;
+      _timers.push(setTimeout(() => { if (_active) _ctrl[s.fn]?.(); }, elapsed));
+    }
+  }
+
+  function _clearAll() {
+    _timers.forEach(clearTimeout);
+    _timers = [];
+    if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
+    _clearHighlight();
+    _hideCallout();
+  }
+
+  function _clearHighlight() {
+    if (_highlightEl) { _highlightEl.classList.remove('demo-highlight'); _highlightEl = null; }
+  }
+
+  function _highlight(selector) {
+    _clearHighlight();
+    const el = document.querySelector(selector);
+    if (el) { el.classList.add('demo-highlight'); _highlightEl = el; }
+  }
+
+  function _showCallout(label, text) {
+    const c  = document.getElementById('demo-callout');
+    const lb = document.getElementById('demo-callout-label');
+    const tx = document.getElementById('demo-callout-text');
+    if (!c) return;
+    lb.textContent = label;
+    tx.textContent = text;
+    c.style.display = 'block';
+    // Re-trigger animation
+    c.style.animation = 'none';
+    c.offsetHeight; // reflow
+    c.style.animation = '';
+  }
+
+  function _hideCallout() {
+    const c = document.getElementById('demo-callout');
+    if (c) c.style.display = 'none';
+  }
+
+  async function _speak(text) {
+    try {
+      const res = await fetch(`${API}/api/voice/speak`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) return;
+      const { audio_base64 } = await res.json();
+      if (!audio_base64) return;
+      const bin   = atob(audio_base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const url   = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+      new Audio(url).play();
+    } catch { /* demo continues silently if TTS fails */ }
+  }
+
+  const _ctrl = {
+    _switchToFlood() {
+      document.querySelector('.stab[data-tab="flood"]')?.click();
+    },
+    _startSim() {
+      fetch(`${API}/api/flood-scenario/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interval_seconds: 8 }),
+      }).catch(() => {});
+    },
+    _speakAlert1() {
+      _speak('Uwaga! Poziom wody na Wieprzu przekroczył stan alarmowy. Uruchamiam procedurę monitorowania zagrożenia powodziowego w województwie lubelskim.');
+    },
+    _panMap() {
+      map.flyTo([51.42, 21.97], 10, { animate: true, duration: 2 });
+    },
+    _calloutGauges() {
+      _highlight('#flood-gauge-list');
+      _showCallout('Rzeki — poziomy alarmowe',
+        'Czujniki IMGW monitorują poziomy wód w czasie rzeczywistym. Kolor czerwony oznacza przekroczenie stanu alarmowego.');
+    },
+    _calloutHospitals() {
+      _speak('Wykryto krytyczne zagrożenie. Szpitale w strefie powodzi wymagają natychmiastowej ewakuacji. Uruchamiam procedurę transportu sanitarnego.');
+      _highlight('#flood-hospital-table');
+      _showCallout('Status szpitali',
+        'Ocena każdego szpitala na podstawie stref ISOK, poziomów rzek i zdarzeń 112. Czerwony = ewakuacja wymagana.');
+    },
+    _calloutEvac() {
+      _speak('Inicjuję protokół ewakuacji medycznej. Przydział jednostek transportu sanitarnego w toku. Oczekiwany czas ewakuacji — czterdzieści pięć minut.');
+      _highlight('#flood-evac-list');
+      _showCallout('Ewakuacja medyczna',
+        'Panel dowodzenia ewakuacją — przydział jednostek T / P / S / N do każdego szpitala z czasem dojazdu i analizą niedoborów.');
+    },
+    _finish() {
+      _clearHighlight();
+      _hideCallout();
+      _active = false;
+      showToast('Demo zakończone — eksploruj aplikację samodzielnie', 'success', '⚡ SENTINEL');
+    },
+  };
+
+  function showCountdown() {
+    if (new URLSearchParams(location.search).has('nodemo')) return;
+    const overlay = document.getElementById('demo-overlay');
+    const numEl   = document.getElementById('demo-countdown-num');
+    if (!overlay || !numEl) return;
+
+    let n = 8;
+    numEl.textContent = n;
+    overlay.style.display = 'flex';
+
+    _countdownTimer = setInterval(() => {
+      n--;
+      numEl.textContent = n;
+      if (n <= 0) {
+        clearInterval(_countdownTimer);
+        _countdownTimer = null;
+        overlay.style.display = 'none';
+        start();
+      }
+    }, 1000);
+  }
+
+  function start() {
+    _active = true;
+    document.getElementById('demo-overlay').style.display = 'none';
+    _schedule(STEPS);
+  }
+
+  function skip() {
+    _active = false;
+    _clearAll();
+    document.getElementById('demo-overlay').style.display = 'none';
+  }
+
+  // Bind skip button
+  document.getElementById('demo-skip-btn')?.addEventListener('click', skip);
+
+  // Auto-trigger
+  const params = new URLSearchParams(location.search);
+  if (!params.has('nodemo')) {
+    if (params.has('demo')) {
+      window.addEventListener('load', () => start());
+    } else {
+      window.addEventListener('load', () => setTimeout(showCountdown, 3000));
+    }
+  }
+
+  return { start, skip, showCountdown };
+})();
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 

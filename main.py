@@ -11,7 +11,7 @@ from plugins.flood_zones import FloodZonesPlugin
 from plugins.gios import GIOSPlugin
 from plugins.imgw_hydro import IMGWHydroPlugin
 from plugins.mock_boundary import MockBoundaryPlugin, EventsPlugin
-from plugins.resources import FireStationsPlugin, HospitalsPlugin, HospitalStatusPlugin, SchoolsPlugin, SocialPlugin
+from plugins.resources import FireStationsPlugin, HospitalsPlugin, HospitalStatusPlugin, SchoolsPlugin, SocialPlugin, TransportUnitsPlugin
 from plugins.flood_scenario import FloodScenarioPlugin
 from plugins.simulation import SimulationPlugin
 from routers.assistant import router as assistant_router
@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     registry.register(GIOSPlugin())
     registry.register(IMGWHydroPlugin())
     registry.register(HospitalStatusPlugin())
+    registry.register(TransportUnitsPlugin())
     registry.register(FloodScenarioPlugin())
     yield
 

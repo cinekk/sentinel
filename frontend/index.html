@@ -312,6 +312,24 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <div id="toast-container"></div>
+
+<!-- Demo countdown overlay -->
+<div id="demo-overlay" style="display:none">
+  <div class="demo-panel">
+    <div class="demo-panel-eyebrow">SENTINEL · Demo automatyczne</div>
+    <div class="demo-panel-title">Symulacja kryzysu<br>powodziowego</div>
+    <div class="demo-panel-countdown" id="demo-countdown-num">8</div>
+    <div class="demo-panel-sub">Demo uruchomi się automatycznie</div>
+    <button id="demo-skip-btn" class="sim-btn">Pomiń demo</button>
+  </div>
+</div>
+
+<!-- Demo callout bubble -->
+<div id="demo-callout" style="display:none">
+  <div class="demo-callout-label" id="demo-callout-label"></div>
+  <div class="demo-callout-text" id="demo-callout-text"></div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
