@@ -198,6 +198,7 @@ _LAYER_KEYWORDS: dict[str, list[str]] = {
     "simulation_threat": ["symulac", "zagroż", "strefa", "pluma", "dyspersj"],
     "lublin_boundary": ["granica", "powiat", "województw"],
     "events": ["zdarzen", "event", "kryzys", "incydent"],
+    "transport_units": ["transport", "karetk", "ambulans", "sanitarn"],
 }
 
 
