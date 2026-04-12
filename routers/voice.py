@@ -43,43 +43,69 @@ async def _load_resource_features() -> list[dict]:
 
 @router.post("/briefing", response_model=BriefingResponse)
 async def voice_briefing() -> BriefingResponse:
-    active = store.list_active()
+    try:
+        active = store.list_active()
 
-    affected: list[dict] = []
-    if active:
-        facilities = await _load_resource_features()
-        affected = facilities_in_zones(active, facilities)
+        affected: list[dict] = []
+        if active:
+            facilities = await _load_resource_features()
+            affected = facilities_in_zones(active, facilities)
 
-    sim_plugin   = registry.get("simulation_threat")
-    flood_plugin = registry.get("flood_scenario")
+        sim_plugin   = registry.get("simulation_threat")
+        flood_plugin = registry.get("flood_scenario")
 
-    flood_state     = flood_plugin.state if flood_plugin else None
-    flood_hospitals: list[dict] = []
-    if flood_state and flood_state.get("running"):
-        from services.flood_assessment import get_assessment
-        statuses = await get_assessment()
-        flood_hospitals = [
-            s.model_dump() for s in statuses
-            if s.status in ("evacuate", "at_risk")
-        ]
+        flood_state     = flood_plugin.state if flood_plugin else None
+        flood_hospitals: list[dict] = []
+        if flood_state and flood_state.get("running"):
+            from services.flood_assessment import get_assessment
+            statuses = await get_assessment()
+            flood_hospitals = [
+                s.model_dump() for s in statuses
+                if s.status in ("evacuate", "at_risk")
+            ]
 
-    ctx = BriefingContext(
-        active_crises=active,
-        affected=affected,
-        sim_state=sim_plugin.state if sim_plugin else None,
-        flood_scenario_state=flood_state,
-        flood_hospitals=flood_hospitals,
-        air_quality=await get_air_quality_data(),
-        weather=WEATHER_DATA,
-    )
-    text = generate_briefing_text(ctx)
-    log.info("Briefing text (%d chars): %s…", len(text), text[:80])
+        ctx = BriefingContext(
+            active_crises=active,
+            affected=affected,
+            sim_state=sim_plugin.state if sim_plugin else None,
+            flood_scenario_state=flood_state,
+            flood_hospitals=flood_hospitals,
+            air_quality=await get_air_quality_data(),
+            weather=WEATHER_DATA,
+        )
+        text = generate_briefing_text(ctx)
+        log.info("Briefing text (%d chars): %s…", len(text), text[:80])
 
-    result = await synthesize_with_timestamps(text)
+        result = await synthesize_with_timestamps(text)
 
+        return BriefingResponse(
+            audio_base64=result.audio_base64,
+            words=[BriefingWordTiming(word=w.word, start=w.start, end=w.end) for w in result.words],
+            text=text,
+            duration_seconds=result.duration_seconds,
+        )
+    except Exception:
+        log.exception("Briefing generation failed — returning text-only fallback")
+        fallback_text = "Briefing niedostępny. System monitoringu aktywny. Koniec briefingu."
+        fake = _fake_briefing(fallback_text)
+        return fake
+
+
+def _fake_briefing(text: str) -> BriefingResponse:
+    """Generate a text-only briefing response with synthetic timings."""
+    words_raw = text.split()
+    wpm = 160.0
+    sec_per_word = 60.0 / wpm
+    words = []
+    t = 0.0
+    for w in words_raw:
+        end = t + sec_per_word
+        words.append(BriefingWordTiming(word=w, start=round(t, 3), end=round(end, 3)))
+        t = end + 0.05
+    duration = words[-1].end if words else 0.0
     return BriefingResponse(
-        audio_base64=result.audio_base64,
-        words=[BriefingWordTiming(word=w.word, start=w.start, end=w.end) for w in result.words],
+        audio_base64="",
+        words=words,
         text=text,
-        duration_seconds=result.duration_seconds,
+        duration_seconds=round(duration, 2),
     )
