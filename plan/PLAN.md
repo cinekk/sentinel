@@ -52,6 +52,8 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 | 6 — AI Classification & Voice | [PHASE-6-ai-voice.md](PHASE-6-ai-voice.md) | 🔲 Not started |
 | 7 — useMaps Integration | [PHASE-7-usemaps.md](PHASE-7-usemaps.md) | 🔲 Not started |
 | 8 — Polish & Demo | [PHASE-8-demo.md](PHASE-8-demo.md) | 🔲 Not started |
+| 9 — Flood Medical Crisis (Zestaw A) | [PHASE-9-flood-medical.md](PHASE-9-flood-medical.md) | 🔲 Not started |
+| 10 — Flood Scenario Simulation Engine | [PHASE-10-flood-simulation.md](PHASE-10-flood-simulation.md) | 🔲 Not started |
 
 ---
 
@@ -102,6 +104,14 @@ Coordinate system: internal WGS84 (EPSG:4326), transformed to EPSG:2180 on useMa
 ### Phase 8 — Polish & Demo
 
 → See [PHASE-8-demo.md](PHASE-8-demo.md) for full task list and implementation notes.
+
+### Phase 9 — Flood Medical Crisis (Zestaw A)
+
+→ See [PHASE-9-flood-medical.md](PHASE-9-flood-medical.md) for full task list and implementation notes.
+
+### Phase 10 — Flood Scenario Simulation Engine
+
+→ See [PHASE-10-flood-simulation.md](PHASE-10-flood-simulation.md) for full task list and implementation notes.
 
 ---
 
