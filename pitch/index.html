@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SENTINEL — Pitch</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     1. TITLE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="title-slide">
+  <h1>SENTINEL</h1>
+  <div class="subtitle">Inteligentna Mapa Wojew&oacute;dztwa Lubelskiego</div>
+  <p style="font-size:0.52em; color:var(--text-mid); margin-top:0.8em;">
+    Geospatial Decision Dashboard &middot; Proof of Concept
+  </p>
+  <div class="team">Civil42 Hackathon &middot; 11&ndash;12 kwietnia 2026</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     2. PROBLEM
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Problem</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <span class="stat-value">25 155</span>
+      <span class="stat-label">km&sup2; powierzchni</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">213</span>
+      <span class="stat-label">gmin</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">30+</span>
+      <span class="stat-label">rozproszonych system&oacute;w</span>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    Dane o stanie wojew&oacute;dztwa &mdash; szpitale, szko&lstrok;y, &sacute;rodowisko, transport &mdash;
+    rozproszone po kilkudziesi&eogon;ciu portalach, BIP-ach i PDF-ach.
+    <strong>Brak jednego widoku.</strong>
+    Przygotowanie briefingu zajmuje 2&ndash;4 godziny r&eogon;cznej pracy.
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     3. DUAL PROBLEM
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Dwa tryby, jeden system</h2>
+
+  <div class="compare">
+    <div class="compare-col">
+      <h3>Tryb codzienny</h3>
+      <ul>
+        <li>Przegladanie warstw danych regionu</li>
+        <li>Briefing dla Marsza&lstrok;ka</li>
+        <li>Odpowiadanie na pytania ad-hoc</li>
+        <li>Weryfikacja danych z BIP gmin</li>
+      </ul>
+      <p class="dim" style="font-size:0.62em; margin-top:0.6em;">
+        &bdquo;Ile &lstrok;&oacute;&zdot;ek szpitalnych jest w promieniu 30&nbsp;km od Pu&lstrok;aw?&rdquo;
+      </p>
+    </div>
+    <div class="compare-col crisis" style="border-color: rgba(239,68,68,.3);">
+      <h3 style="color:var(--red);">Tryb kryzysowy</h3>
+      <ul>
+        <li>Wizualizacja strefy zagro&zdot;enia</li>
+        <li>Identyfikacja nara&zdot;onych obiekt&oacute;w</li>
+        <li>Rekomendacje dzia&lstrok;a&nacute;</li>
+        <li>&Sacute;lad audytowy decyzji</li>
+      </ul>
+      <p style="font-size:0.62em; margin-top:0.6em; color:var(--red);">
+        &bdquo;Sk&aogon;&zdot;enie dotrze do szko&lstrok;y za 22&nbsp;minuty &mdash; 420&nbsp;dzieci.&rdquo;
+      </p>
+    </div>
+  </div>
+
+  <p style="font-size:0.58em; color:var(--text-mid); text-align:center; margin-top:0.6em;">
+    Ta sama mapa &middot; te same warstwy &middot; ta sama architektura &mdash; r&oacute;&zdot;ni si&eogon; tylko aktywowane analizy
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     4. SOLUTION OVERVIEW
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Rozwi&aogon;zanie: SENTINEL</h2>
+
+  <ul>
+    <li><strong>Interaktywna mapa GIS</strong> wojew&oacute;dztwa z podzia&lstrok;em na powiaty i gminy</li>
+    <li><strong>Wielowarstwowe nak&lstrok;adki</strong> &mdash; &sacute;rodowisko, szpitale, szko&lstrok;y, DPS, stra&zdot;, zagro&zdot;enia &mdash; do&lstrok;aczane i wy&lstrok;aczane jednym klikni&eogon;ciem</li>
+    <li><strong>Dynamiczne od&sacute;wie&zdot;anie</strong> &mdash; dane z GIO&Sacute; aktualizowane co godzin&eogon;, symulacja co 30 sekund</li>
+    <li><strong>Filtry i selekcja</strong> &mdash; klikni&eogon;cie na powiat/gmin&eogon; filtruje dane</li>
+    <li><strong>Responsywny UI</strong> &mdash; du&zdot;y monitor w sali konferencyjnej lub tablet</li>
+    <li><strong>Case study ZESTAW&nbsp;D</strong> &mdash; po&zdot;ar przemys&lstrok;owy, pe&lstrok;na symulacja z timeline</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     5. ARCHITECTURE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Architektura</h2>
+
+  <div class="flow">
+    <div class="flow-box">GIO&Sacute; API<br><span style="font-size:0.75em; color:var(--text-dim);">jako&sacute;&cacute; powietrza</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box accent">FastAPI<br><span style="font-size:0.75em;">plugin system</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box">Leaflet GIS<br><span style="font-size:0.75em; color:var(--text-dim);">frontend</span></div>
+  </div>
+
+  <div class="flow" style="margin-top:6px;">
+    <div class="flow-box">Qwen3 235B<br><span style="font-size:0.75em; color:var(--text-dim);">OpenRouter</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box accent">AI Assistant<br><span style="font-size:0.75em;">NL &rarr; ViewConfig</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box">Mapa reaguje<br><span style="font-size:0.75em; color:var(--text-dim);">warstwy + filtry</span></div>
+  </div>
+
+  <div class="flow" style="margin-top:6px;">
+    <div class="flow-box">ElevenLabs<br><span style="font-size:0.75em; color:var(--text-dim);">TTS + timestamps</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box accent">Voice Briefing<br><span style="font-size:0.75em;">karaoke sync</span></div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-box">Audio + transkrypcja<br><span style="font-size:0.75em; color:var(--text-dim);">live w UI</span></div>
+  </div>
+
+  <div style="display:flex; gap:12px; margin-top:16px; justify-content:center; flex-wrap:wrap;">
+    <span class="badge badge-amber">Python 3.12</span>
+    <span class="badge badge-amber">FastAPI</span>
+    <span class="badge badge-blue">Leaflet.js</span>
+    <span class="badge badge-green">SQLite async</span>
+    <span class="badge badge-amber">Docker + Caddy</span>
+    <span class="badge badge-green">CI/CD GitHub Actions</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     6. DATA INTEGRATION
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>&Zacute;r&oacute;d&lstrok;a danych</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <span class="stat-value">29</span>
+      <span class="stat-label">zidentyfikowanych &zacute;r&oacute;de&lstrok;</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">10</span>
+      <span class="stat-label">publiczne API</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">14</span>
+      <span class="stat-label">stacji GIO&Sacute; live</span>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3 style="font-size:0.8em;">&Sacute;rodowiskowe <span class="badge badge-green">live</span></h3>
+      <div class="source-pills">
+        <span class="source-pill live">GIO&Sacute; API</span>
+        <span class="source-pill live">IMGW SYNOP</span>
+        <span class="source-pill planned">Airly</span>
+      </div>
+
+      <h3 style="font-size:0.8em; margin-top:0.5em;">Obiekty wra&zdot;liwe</h3>
+      <div class="source-pills">
+        <span class="source-pill live">RSPO (szko&lstrok;y)</span>
+        <span class="source-pill planned">MRIPS (DPS)</span>
+        <span class="source-pill live">NFZ (szpitale)</span>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-size:0.8em;">Reagowanie</h3>
+      <div class="source-pills">
+        <span class="source-pill live">PSP / OSP</span>
+        <span class="source-pill planned">Transport</span>
+        <span class="source-pill planned">GUS populacja</span>
+      </div>
+
+      <h3 style="font-size:0.8em; margin-top:0.5em;">Sygna&lstrok;y</h3>
+      <div class="source-pills">
+        <span class="source-pill planned">Social media</span>
+        <span class="source-pill planned">BIP scraping</span>
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:0.5em; color:var(--text-dim); text-align:center; margin-top:0.6em;">
+    Pe&lstrok;na analiza integracji 29 &zacute;r&oacute;de&lstrok; &mdash; klasyfikacja API / scraping / wewn&eogon;trzne
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     7. GIO&Sacute; LIVE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>GIO&Sacute; &mdash; dane na &zdot;ywo</h2>
+
+  <div class="highlight-box">
+    14 stacji pomiarowych w wojew&oacute;dztwie lubelskim.
+    Dane pobierane z publicznego API GIO&Sacute; (<code>api.gios.gov.pl</code>),
+    cache&rsquo;owane co 15 minut, z automatycznym fallbackiem na ostatni znany odczyt.
+  </div>
+
+  <table style="font-size:0.5em; margin-top:0.6em;">
+    <tr>
+      <th>Stacja</th>
+      <th>Miasto</th>
+      <th>Typ</th>
+    </tr>
+    <tr><td>ul.&nbsp;Obywatelska</td><td>Lublin</td><td><span class="badge badge-green">auto</span></td></tr>
+    <tr><td>ul.&nbsp;Orzechowa</td><td>Bia&lstrok;a Podlaska</td><td><span class="badge badge-green">auto</span></td></tr>
+    <tr><td>ul.&nbsp;Koszarowa</td><td>Kra&sacute;nik</td><td><span class="badge badge-green">auto</span></td></tr>
+    <tr><td>ul.&nbsp;Hrubieszowska</td><td>Zamo&sacute;&cacute;</td><td><span class="badge badge-green">auto</span></td></tr>
+    <tr><td>ul.&nbsp;Po&lstrok;aniecka</td><td>Che&lstrok;m</td><td><span class="badge badge-green">auto</span></td></tr>
+    <tr><td>ul.&nbsp;Sanatoryjna</td><td>Krasnobr&oacute;d</td><td><span class="badge badge-green">auto</span></td></tr>
+    <tr><td colspan="3" style="color:var(--text-dim); text-align:center;">+ 8 kolejnych stacji &hellip;</td></tr>
+  </table>
+
+  <p style="font-size:0.5em; color:var(--text-mid); margin-top:0.4em;">
+    Indeks jako&sacute;ci powietrza: PM2.5, PM10, SO&sub2;, NO&sub2;, O&sub3; &mdash; kolorowe markery na mapie z popupami
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     8. CASE STUDY: ZESTAW D
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Case Study: Po&zdot;ar przemys&lstrok;owy</h2>
+  <p style="font-size:0.58em; color:var(--text-mid); margin-bottom:0.6em;">
+    ZESTAW D &mdash; Awaria &sacute;rodowiskowa: po&zdot;ar w terminalu logistycznym Zak&lstrok;ad&oacute;w Azotowych Pu&lstrok;awy
+  </p>
+
+  <div class="timeline">
+    <div class="timeline-item critical">
+      <span class="t-time">T+0 / 07:23</span> &mdash; Zapalenie. PM2.5 skok z 12 do 187 &micro;g/m&sup3; w 12 minut
+    </div>
+    <div class="timeline-item">
+      <span class="t-time">T+18 / 07:41</span> &mdash; SENTINEL generuje alert: model dyspersji Gaussa,
+      obiekty wra&zdot;liwe, rekomendacja AI
+    </div>
+    <div class="timeline-item">
+      <span class="t-time">T+22 / 07:45</span> &mdash; Operator briefinguje Marsza&lstrok;ka &mdash; 90 sekund,
+      jeden ekran, pe&lstrok;en obraz sytuacji
+    </div>
+    <div class="timeline-item">
+      <span class="t-time">T+28 / 07:51</span> &mdash; SP nr 4: shelter-in-place, 420 dzieci w bezpiecznej strefie
+    </div>
+    <div class="timeline-item">
+      <span class="t-time">T+42 / 08:05</span> &mdash; Zmiana prognozy wiatru wykryta automatycznie &mdash;
+      LO Czartoryskiego (780 uczni&oacute;w) w nowej strefie
+    </div>
+    <div class="timeline-item">
+      <span class="t-time">T+240 / 11:23</span> &mdash; Po&zdot;ar ugaszony. 0 poszkodowanych.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     9. SENTINEL vs MANUAL
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>SENTINEL vs procedura r&eogon;czna</h2>
+
+  <table>
+    <tr>
+      <th>Decyzja</th>
+      <th style="color:var(--green);">SENTINEL</th>
+      <th style="color:var(--red);">Manualnie</th>
+      <th>R&oacute;&zdot;nica</th>
+    </tr>
+    <tr>
+      <td>SP nr 4 &mdash; shelter-in-place</td>
+      <td style="color:var(--green);">T+28 (07:51)</td>
+      <td style="color:var(--red);">T+86 (08:49)</td>
+      <td><strong>58 min</strong></td>
+    </tr>
+    <tr>
+      <td>DPS Pu&lstrok;awy &mdash; ochrona</td>
+      <td style="color:var(--green);">T+35 (07:58)</td>
+      <td style="color:var(--red);">T+54 (08:17)</td>
+      <td><strong>19 min</strong></td>
+    </tr>
+    <tr>
+      <td>Szpital &mdash; decyzja o nie-ewakuacji</td>
+      <td style="color:var(--green);">T+22 (07:45)</td>
+      <td style="color:var(--red);">BRAK</td>
+      <td><strong>&mdash;</strong></td>
+    </tr>
+    <tr>
+      <td>LO Czartoryskiego (780 uczni&oacute;w)</td>
+      <td style="color:var(--green);">T+50 (08:13)</td>
+      <td style="color:var(--red);">BRAK</td>
+      <td><strong>&mdash;</strong></td>
+    </tr>
+    <tr>
+      <td>Alert RCB dla mieszka&nacute;c&oacute;w</td>
+      <td style="color:var(--green);">T+42 (08:05)</td>
+      <td style="color:var(--red);">T+142 (09:45)</td>
+      <td><strong>100 min</strong></td>
+    </tr>
+  </table>
+
+  <div class="highlight-box crisis" style="margin-top:0.5em;">
+    Jeden ekran zast&aogon;pi&lstrok; 14 telefon&oacute;w, 3 okna przegl&aogon;darki i papierow&aogon; map&eogon;.
+    Wynik: <strong>0 poszkodowanych</strong> w&sacute;r&oacute;d 1&nbsp;814 os&oacute;b w obiektach wra&zdot;liwych.
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     10. DATA DEPENDENCIES
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Zale&zdot;no&sacute;ci mi&eogon;dzy danymi</h2>
+
+  <p style="font-size:0.6em; color:var(--text-mid); margin-bottom:0.5em;">
+    Warto&sacute;&cacute; SENTINEL wynika z <strong>krzy&zdot;owania zbior&oacute;w danych</strong> &mdash;
+    &zdot;adne &zacute;r&oacute;d&lstrok;o samo nie daje odpowiedzi.
+  </p>
+
+  <div class="flow" style="flex-direction: column; align-items: stretch; gap: 8px;">
+    <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
+      <div class="flow-box">IMGW wiatr</div>
+      <span class="flow-arrow">+</span>
+      <div class="flow-box">GIO&Sacute; PM2.5</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-box accent">Model dyspersji &rarr; strefa zagro&zdot;enia</div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
+      <div class="flow-box">Strefa</div>
+      <span class="flow-arrow">+</span>
+      <div class="flow-box">Szko&lstrok;y / DPS / szpitale</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-box accent">Kto jest nara&zdot;ony? Kiedy?</div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
+      <div class="flow-box">Populacja</div>
+      <span class="flow-arrow">+</span>
+      <div class="flow-box">Transport</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-box accent">Ewakuacja czy schronienie?</div>
+    </div>
+  </div>
+
+  <p style="font-size:0.5em; color:var(--text-dim); text-align:center; margin-top:0.5em;">
+    Ka&zdot;dy &lstrok;a&nacute;cuch to decyzja, kt&oacute;rej procedura r&eogon;czna nie podejmuje &mdash; lub podejmuje za p&oacute;&zacute;no.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     11. AI ASSISTANT
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Asystent AI</h2>
+
+  <div class="two-col">
+    <div>
+      <h3 style="font-size:0.85em;">Qwen3 235B <span class="badge badge-green">open-weights</span></h3>
+      <ul>
+        <li>Model: <code>Qwen3-235B-A22B-2507</code></li>
+        <li>22B aktywnych parametr&oacute;w (MoE)</li>
+        <li>Licencja: <strong>Apache 2.0</strong></li>
+        <li>Koszt: ~$0.001 / zapytanie</li>
+        <li>Najlepszy multilingual benchmark (87.5%)</li>
+        <li>Najni&zdot;szy structured output error rate (0.31%)</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="font-size:0.85em;">Przep&lstrok;yw</h3>
+      <div class="highlight-box" style="font-size:0.85em;">
+        <strong>Operator:</strong> &bdquo;Poka&zdot; szpitale z dost&eogon;pnymi &lstrok;&oacute;&zdot;kami w pobli&zdot;u po&zdot;aru&rdquo;<br><br>
+        <strong>AI &rarr;</strong> JSON ViewConfig<br>
+        warstwy: szpitale + zagro&zdot;enie<br>
+        popup: &lstrok;&oacute;&zdot;ka, SOR, OIT<br>
+        krytyczny atrybut: dost&eogon;pne &lstrok;&oacute;&zdot;ka<br><br>
+        <strong>Mapa reaguje</strong> &mdash; programowe prze&lstrok;&aogon;czenie widoku
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:0.5em; color:var(--text-dim); text-align:center; margin-top:0.5em;">
+    J&eogon;zyk naturalny &rarr; konfiguracja widoku mapy &mdash; bez u&zdot;ycia myszy
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     12. VOICE BRIEFING
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Briefing g&lstrok;osowy</h2>
+
+  <div class="two-col">
+    <div>
+      <h3 style="font-size:0.85em;">Karaoke Briefing</h3>
+      <ul>
+        <li>ElevenLabs TTS z timestampami per-znak</li>
+        <li>Synchronizowana transkrypcja &mdash; s&lstrok;owa pod&sacute;wietlaj&aogon; si&eogon; z audio</li>
+        <li>Tekst: <strong>deterministyczny template</strong>, nie LLM &mdash; &zdot;adnych halucynacji w alertach</li>
+        <li>Dzia&lstrok;a wizualnie (bez g&lstrok;o&sacute;nik&oacute;w) i d&zacute;wi&eogon;kowo</li>
+      </ul>
+
+      <div style="display:flex; gap:8px; margin-top:0.5em;">
+        <span class="badge badge-amber">ElevenLabs</span>
+        <span class="badge badge-amber">Multilingual v2</span>
+        <span class="badge badge-green">&lt; $0.05 / briefing</span>
+      </div>
+    </div>
+    <div>
+      <div style="background:var(--bg-card); border:1px solid var(--border-mid); border-radius:8px; padding:16px; font-size:0.55em; font-family:var(--font-mono); line-height:1.8;">
+        <div style="color:var(--amber); margin-bottom:8px; font-family:var(--font-display); font-size:1.4em; letter-spacing:0.05em;">BRIEFING SYTUACYJNY</div>
+        <span style="color:var(--amber); text-shadow:0 0 8px rgba(245,158,11,0.5);">Aktywne</span>
+        <span style="color:var(--amber); text-shadow:0 0 8px rgba(245,158,11,0.5);">zagro&zdot;enie:</span>
+        <span style="color:rgba(255,255,255,0.9);">po&zdot;ar</span>
+        <span style="color:rgba(255,255,255,0.9);">terminalu</span>
+        <span style="color:rgba(255,255,255,0.3);">logistycznego.</span>
+        <span style="color:rgba(255,255,255,0.3);">Strefa</span>
+        <span style="color:rgba(255,255,255,0.3);">ewakuacji:</span>
+        <span style="color:rgba(255,255,255,0.3);">5</span>
+        <span style="color:rgba(255,255,255,0.3);">kilometr&oacute;w.</span>
+        <span style="color:rgba(255,255,255,0.3);">W</span>
+        <span style="color:rgba(255,255,255,0.3);">strefie</span>
+        <span style="color:rgba(255,255,255,0.3);">zagro&zdot;enia</span>
+        <span style="color:rgba(255,255,255,0.3);">6</span>
+        <span style="color:rgba(255,255,255,0.3);">obiekt&oacute;w&hellip;</span>
+        <div style="margin-top:10px; height:4px; border-radius:2px; background:var(--bg-lift); overflow:hidden;">
+          <div style="width:35%; height:100%; background:var(--amber); border-radius:2px;"></div>
+        </div>
+        <div style="color:var(--text-dim); margin-top:4px; font-size:0.85em;">4.2s / 28.5s</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     13. SCALABILITY
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Skalowalno&sacute;&cacute;</h2>
+
+  <div class="two-col">
+    <div>
+      <h3 style="font-size:0.85em;">Architektura plugin&oacute;w</h3>
+      <ul>
+        <li>Ka&zdot;de &zacute;r&oacute;d&lstrok;o danych = osobny plugin</li>
+        <li>Rejestracja w runtime &mdash; <code>registry.register()</code></li>
+        <li>Wsp&oacute;lny interfejs: <code>BasePlugin</code> z GeoJSON output</li>
+        <li>Dodanie nowej warstwy: 1 plik, 0 zmian w reszcie systemu</li>
+      </ul>
+
+      <h3 style="font-size:0.85em; margin-top:0.6em;">Deployment</h3>
+      <ul>
+        <li>Docker Compose: app + Caddy + pitch</li>
+        <li>HTTPS automatyczny (Caddy)</li>
+        <li>CI/CD: push to main &rarr; deploy &rarr; health check</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="font-size:0.85em;">Gotowo&sacute;&cacute; do rozszerzenia</h3>
+      <table style="font-size:0.85em;">
+        <tr>
+          <th>Warstwa</th>
+          <th>Status</th>
+        </tr>
+        <tr><td>Jako&sacute;&cacute; powietrza (GIO&Sacute;)</td><td><span class="badge badge-green">live</span></td></tr>
+        <tr><td>Szpitale + SOR + OIT</td><td><span class="badge badge-green">live</span></td></tr>
+        <tr><td>Szko&lstrok;y (RSPO)</td><td><span class="badge badge-green">live</span></td></tr>
+        <tr><td>Stra&zdot; (PSP/OSP)</td><td><span class="badge badge-green">live</span></td></tr>
+        <tr><td>Strefy powodziowe</td><td><span class="badge badge-green">live</span></td></tr>
+        <tr><td>Symulacja kryzysu</td><td><span class="badge badge-green">live</span></td></tr>
+        <tr><td>Zg&lstrok;oszenia 112</td><td><span class="badge badge-amber">sim</span></td></tr>
+        <tr><td>Social media</td><td><span class="badge badge-blue">plan</span></td></tr>
+        <tr><td>BIP scraping</td><td><span class="badge badge-blue">plan</span></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     14. LIVE DEMO
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Demo na &zdot;ywo</h2>
+
+  <div style="text-align:center; margin:1em 0;">
+    <a href="https://sentinel.xd.ventures" target="_blank"
+       style="font-family:var(--font-display); font-size:2em; color:var(--amber); text-decoration:none; border-bottom:2px solid var(--amber-border);">
+      sentinel.xd.ventures
+    </a>
+  </div>
+
+  <div class="stat-grid" style="max-width:700px; margin:0 auto;">
+    <div class="stat-card">
+      <span class="stat-value" style="font-size:1.5em;">1</span>
+      <span class="stat-label">Mapa z warstwami</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" style="font-size:1.5em;">2</span>
+      <span class="stat-label">Symulacja kryzysu</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" style="font-size:1.5em;">3</span>
+      <span class="stat-label">AI + Briefing</span>
+    </div>
+  </div>
+
+  <ol style="font-size:0.58em; max-width:650px; margin:0.8em auto 0; color:var(--text-mid);">
+    <li>Przejrzyj warstwy &mdash; szpitale, szko&lstrok;y, GIO&Sacute;, stra&zdot;</li>
+    <li>Uruchom symulacj&eogon; po&zdot;aru &mdash; obserwuj stref&eogon; zagro&zdot;enia i obiekty</li>
+    <li>Zapytaj asystenta AI &mdash; &bdquo;Poka&zdot; szpitale blisko po&zdot;aru&rdquo;</li>
+    <li>W&lstrok;&aogon;cz briefing g&lstrok;osowy &mdash; karaoke z ElevenLabs</li>
+  </ol>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     15. END
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="end-slide">
+  <h1>SENTINEL</h1>
+  <div class="subtitle" style="font-size:0.65em;">
+    &Sacute;wiadomo&sacute;&cacute; sytuacyjna &middot; Wojew&oacute;dztwo Lubelskie
+  </div>
+  <a href="https://sentinel.xd.ventures" target="_blank" class="demo-link">
+    sentinel.xd.ventures
+  </a>
+  <p style="font-size:0.55em; color:var(--text-dim); margin-top:2em;">
+    Dzi&eogon;kujemy &middot; pytania?
+  </p>
+</section>
+
+</div><!-- .slides -->
+</div><!-- .reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: true,
+    width: 1280,
+    height: 720,
+    margin: 0.04,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'fade',
+    center: false,
+    controls: true,
+    progress: true,
+  });
+</script>
+</body>
+</html>

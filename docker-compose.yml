@@ -8,6 +8,14 @@ services:
     expose:
       - "8000"
 
+  pitch:
+    build:
+      context: .
+      dockerfile: Dockerfile.pitch
+    restart: unless-stopped
+    expose:
+      - "80"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped

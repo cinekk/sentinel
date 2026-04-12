@@ -1,0 +1,6 @@
+FROM caddy:2-alpine
+
+COPY pitch/Caddyfile /etc/caddy/Caddyfile
+COPY pitch/ /srv/pitch/
+
+EXPOSE 80
