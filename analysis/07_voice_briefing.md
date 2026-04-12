@@ -123,7 +123,7 @@ frontend/app.js           — Karaoke player: Audio + synchronized word highligh
 
 ### Dlaczego template zamiast LLM do tekstu briefingu?
 
-Tekst alertu kryzysowego MUSI być deterministyczny — nie może halucynować liczb, nazw placówek, odległości. Template z parametrami z API jest szybszy (~0ms vs ~3s LLM) i wiarygodniejszy. LLM (Qwen3) zostaje przy zarządzaniu widokiem (Faza A) — jego siła.
+Tekst alertu kryzysowego MUSI być deterministyczny — nie może halucynować liczb, nazw placówek, odległości. Template z parametrami z API jest szybszy (~0ms vs ~3s LLM) i wiarygodniejszy. LLM (Qwen3 8B) zostaje przy zarządzaniu widokiem (Faza A) — jego siła.
 
 ---
 
@@ -287,7 +287,7 @@ Dedykowany panel "Voice Briefing" pod czatem. Bardziej widoczny, ale dodaje kole
 
 ### 9a. Voice Command (STT → action)
 
-Odwrotny flow: operator mówi do mikrofonu → ElevenLabs STT → transkrypcja → Qwen3 parsuje intent → wykonanie + TTS odpowiedź. Wymaga `POST /api/voice/command` + nagrywanie audio w przeglądarce (`MediaRecorder`). Estymacja: +2-3h.
+Odwrotny flow: operator mówi do mikrofonu → ElevenLabs STT → transkrypcja → Qwen3 8B parsuje intent → wykonanie + TTS odpowiedź. Wymaga `POST /api/voice/command` + nagrywanie audio w przeglądarce (`MediaRecorder`). Estymacja: +2-3h.
 
 ### 9b. Briefing automatyczny przy eskalacji
 

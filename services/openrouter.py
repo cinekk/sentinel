@@ -1,7 +1,7 @@
 """
 OpenRouter LLM client for the AI assistant.
 
-Uses open-weights models (default: Qwen3 235B) via the OpenRouter API,
+Uses open-weights models (default: Qwen3 8B) via the OpenRouter API,
 which is OpenAI-compatible. Supports structured JSON output.
 """
 from __future__ import annotations
