@@ -218,7 +218,9 @@ header .subtitle {
 }
 .stab.active .stab-badge { color: var(--amber); background: var(--amber-glow); }
 
-.stab-badge--sim { background: none; color: var(--red); padding: 0; font-size: .55rem; }
+.stab-badge--sim  { background: none; color: var(--red);   padding: 0; font-size: .55rem; }
+.stab-badge--evac { background: var(--red-glow);   border: 1px solid var(--red-border);   color: var(--red);   font-size: .6rem; min-width: 16px; text-align: center; }
+.stab-badge--warn { background: var(--amber-glow); border: 1px solid var(--amber-border); color: var(--amber); font-size: .6rem; min-width: 16px; text-align: center; }
 
 /* ── Tab panels ──────────────────────────────────────────────────────────────── */
 
@@ -1839,3 +1841,120 @@ details[open] .flood-override-summary::before { transform: rotate(90deg); }
 .layer-dot.hospital_status { background: #ef4444; }
 /* gauge layer type dot */
 .layer-dot.gauge { background: #38bdf8; }
+
+/* ── Fire simulation — narrative time ───────────────────────────────────────── */
+
+.sim-narrative-time {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: .04em;
+  margin-left: auto;
+}
+
+/* ── Fire simulation — affected facilities ──────────────────────────────────── */
+
+.fire-impact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 12px 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.fire-impact-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: .7rem;
+  border: 1px solid transparent;
+}
+
+.fire-impact--evac {
+  background: var(--red-glow);
+  border-color: var(--red-border);
+}
+
+.fire-impact--warn {
+  background: var(--amber-glow);
+  border-color: var(--amber-border);
+}
+
+.fire-impact-icon { font-size: .85rem; flex-shrink: 0; }
+
+.fire-impact-name {
+  flex: 1;
+  color: var(--text-hi);
+  font-size: .68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fire-impact-tag {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  letter-spacing: .05em;
+  padding: 2px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.fire-impact--evac .fire-impact-tag { color: var(--red);   background: rgba(239,68,68,.2); }
+.fire-impact--warn .fire-impact-tag { color: var(--amber); background: rgba(245,158,11,.2); }
+
+.fire-impact-dist {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  color: var(--text-mid);
+  flex-shrink: 0;
+}
+
+/* ── Fire simulation — PM2.5 sensors ────────────────────────────────────────── */
+
+.fire-sensor-table {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 12px 10px;
+}
+
+.fire-sensor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .68rem;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-dim);
+}
+.fire-sensor-row:last-child { border-bottom: none; }
+
+.fire-sensor-name {
+  flex: 1;
+  color: var(--text-mid);
+  font-size: .65rem;
+}
+
+.fire-sensor-val {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  font-weight: 700;
+  min-width: 42px;
+  text-align: right;
+}
+
+.fire-sensor-bar {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  letter-spacing: -.05em;
+  min-width: 36px;
+}
+
+.pm-crit { color: var(--red); }
+.pm-high { color: var(--amber); }
+.pm-med  { color: #facc15; }
+.pm-ok   { color: var(--green); }

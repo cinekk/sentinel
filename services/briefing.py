@@ -17,6 +17,8 @@ class BriefingContext:
     active_crises: list[CrisisEvent] = field(default_factory=list)
     affected: list[dict] = field(default_factory=list)
     sim_state: dict | None = None
+    flood_scenario_state: dict | None = None
+    flood_hospitals: list[dict] = field(default_factory=list)
     air_quality: list[dict] = field(default_factory=list)
     weather: list[dict] = field(default_factory=list)
 
@@ -99,7 +101,26 @@ def generate_briefing_text(ctx: BriefingContext) -> str:
                     f"Kierunek wiatru: {wx['wind_dir']}, "
                     f"prędkość {wx['wind_speed_kmh']} kilometrów na godzinę."
                 )
-    else:
+    # Flood scenario section
+    flood_running = (ctx.flood_scenario_state or {}).get("running", False)
+    if flood_running:
+        t_min = (ctx.flood_scenario_state or {}).get("narrative_time_min", 0)
+        parts.append(
+            f"Jednocześnie aktywna symulacja powodzi — "
+            f"czas narracyjny plus {t_min:.0f} minut."
+        )
+        evacuate = [h for h in ctx.flood_hospitals if h.get("status") == "evacuate"]
+        at_risk   = [h for h in ctx.flood_hospitals if h.get("status") == "at_risk"]
+        if evacuate:
+            names = ", ".join(h["name"] for h in evacuate[:3])
+            parts.append(f"Szpitale wymagające natychmiastowej ewakuacji: {names}.")
+        if at_risk:
+            names = ", ".join(h["name"] for h in at_risk[:3])
+            parts.append(f"Szpitale w podwyższonej gotowości: {names}.")
+        if not evacuate and not at_risk:
+            parts.append("Szpitale w regionie powodzi pozostają operacyjne.")
+
+    if not ctx.active_crises and not flood_running:
         parts.append("Brak aktywnych zagrożeń. System monitoringu w trybie czuwania.")
 
     parts.append("Koniec briefingu.")

@@ -35,13 +35,25 @@ async def voice_briefing() -> BriefingResponse:
         facilities = await _load_resource_features()
         affected = facilities_in_zones(active, facilities)
 
-    sim_plugin = registry.get("simulation_threat")
-    sim_state = sim_plugin.state if sim_plugin else None
+    sim_plugin   = registry.get("simulation_threat")
+    flood_plugin = registry.get("flood_scenario")
+
+    flood_state     = flood_plugin.state if flood_plugin else None
+    flood_hospitals: list[dict] = []
+    if flood_state and flood_state.get("running"):
+        from services.flood_assessment import get_assessment
+        statuses = await get_assessment()
+        flood_hospitals = [
+            s.model_dump() for s in statuses
+            if s.status in ("evacuate", "at_risk")
+        ]
 
     ctx = BriefingContext(
         active_crises=active,
         affected=affected,
-        sim_state=sim_state,
+        sim_state=sim_plugin.state if sim_plugin else None,
+        flood_scenario_state=flood_state,
+        flood_hospitals=flood_hospitals,
         air_quality=await get_air_quality_data(),
         weather=WEATHER_DATA,
     )

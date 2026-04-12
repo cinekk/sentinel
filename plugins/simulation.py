@@ -13,18 +13,45 @@ from datetime import datetime, timezone
 
 import services.crisis_store as crisis_store
 from database import SessionLocal, EventRow
-from models import CrisisEventCreate, CrisisEventPatch, SimulationConfig
+from models import CrisisEventCreate, CrisisEventPatch, InjectEventsAct, SimulationConfig
 from plugins.base import BasePlugin
 
 
+_PULAWY_LAT = 51.4158
+_PULAWY_LON = 21.9698
+
 _PRESET = SimulationConfig(
-    source_lat=51.4158,
-    source_lon=21.9698,
+    source_lat=_PULAWY_LAT,
+    source_lon=_PULAWY_LON,
     wind_speed_kmh=15.0,
     wind_direction_deg=45.0,  # NE
     fire_intensity=1.0,
     tick_interval_seconds=10,
 )
+
+# Script layer: predetermined 112/fire events injected at specific ticks.
+# Physics ellipse handles zone geometry — script only adds narrative event pressure.
+_FIRE_SCRIPT: list[tuple[int, InjectEventsAct]] = [
+    (2,  InjectEventsAct(n=3, lat=_PULAWY_LAT, lon=_PULAWY_LON, radius_km=1.5,
+                         category="fire",    severity="high")),    # T+20min — straż pożarna
+    (4,  InjectEventsAct(n=5, lat=_PULAWY_LAT, lon=_PULAWY_LON, radius_km=3.0,
+                         category="medical", severity="high")),    # T+40min — zatrucia dymem
+    (7,  InjectEventsAct(n=4, lat=_PULAWY_LAT, lon=_PULAWY_LON, radius_km=4.0,
+                         category="medical", severity="critical")),# T+70min — presja szpitala
+    (10, InjectEventsAct(n=2, lat=_PULAWY_LAT, lon=_PULAWY_LON, radius_km=1.0,
+                         category="fire",    severity="critical")),# T+100min — wtórny zapłon
+]
+
+_FIRE_DESCRIPTIONS = [
+    "Pożar zakładu chemicznego — silny zadymiony obszar, niebezpieczeństwo eksplozji",
+    "Zatrucie dymem — ewakuacja okolicznych mieszkańców",
+    "Wezwanie pogotowia — ofiara zatrucia substancjami chemicznymi",
+    "Oparzenia — pracownicy zakładów azotowych, transport do SOR",
+    "Skażenie powietrza PM2.5 > 350 µg/m³ — ostrzeżenie dla szkół",
+    "Wypadek drogowy — zatrucie dymem kierowcy na trasie DK12",
+    "Zasłabnięcie — senior w rejonie objętym ostrzeżeniem smogowym",
+    "Pożar wtórny — rozlew substancji niebezpiecznych poza ogrodzeniem",
+]
 
 
 class SimulationPlugin(BasePlugin):
@@ -87,9 +114,11 @@ class SimulationPlugin(BasePlugin):
 
     @property
     def state(self) -> dict:
+        elapsed_s = self._tick * self._config.tick_interval_seconds
         return {
             "running": self._running,
             "tick": self._tick,
+            "narrative_time_min": round(elapsed_s / 60, 1),
             "config": self._config.model_dump(),
             "crisis_id": self._crisis_id,
         }
@@ -176,6 +205,32 @@ class SimulationPlugin(BasePlugin):
                 semi_minor_km=semi_minor_km,
                 bearing_deg=self._config.wind_direction_deg,
             ))
+
+        for tick, act in _FIRE_SCRIPT:
+            if tick == self._tick:
+                asyncio.create_task(self._execute_inject(act))
+
+    async def _execute_inject(self, act: InjectEventsAct) -> None:
+        lat_per_km = 1.0 / 111.0
+        lon_per_km = 1.0 / (111.0 * math.cos(math.radians(act.lat)))
+        async with SessionLocal() as session:
+            for _ in range(act.n):
+                angle = random.uniform(0, 2 * math.pi)
+                dist_km = random.uniform(0, act.radius_km)
+                lat = act.lat + dist_km * lat_per_km * math.sin(angle)
+                lon = act.lon + dist_km * lon_per_km * math.cos(angle)
+                row = EventRow(
+                    latitude=round(lat, 6),
+                    longitude=round(lon, 6),
+                    category=act.category,
+                    severity=act.severity,
+                    status="active",
+                    description=random.choice(_FIRE_DESCRIPTIONS),
+                    source="simulation",
+                    model="fire_scenario",
+                )
+                session.add(row)
+            await session.commit()
 
     async def _persist_event(self) -> None:
         elapsed_min = self._tick * self._config.tick_interval_seconds / 60

@@ -34,6 +34,8 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 const layerGroups  = {};   // layer_id → L.LayerGroup
 const layerEnabled = {};   // layer_id → bool
 const layerMeta    = {};   // layer_id → meta object
+const _layerGeoJSON  = {};    // layer_id → raw GeoJSON FeatureCollection (for in-tab reads)
+let _fireCrisisId    = null;  // tracks active fire crisis_id for fire tab panel
 let allEvents = [];
 
 const layerConfig       = {};  // layer_id → {mainProp, thresholds, popupProps}
@@ -294,6 +296,7 @@ async function fetchAndRenderLayer(id) {
     const data = await res.json();
 
     const geojson = data;
+    _layerGeoJSON[id] = geojson;
 
     // Discover property names and types from GeoJSON features
     const numericProps = new Set();
@@ -796,7 +799,7 @@ async function updateSimState() {
 
     const dot   = document.getElementById('sim-dot');
     const label = document.getElementById('sim-label');
-    const tick  = document.getElementById('sim-tick');
+    const narrativeEl = document.getElementById('sim-narrative-time');
 
     const simTabBadge = document.getElementById('sim-tab-badge');
     if (state.running) {
@@ -811,10 +814,97 @@ async function updateSimState() {
       if (simTabBadge) simTabBadge.style.display = 'none';
     }
 
-    tick.textContent = state.tick > 0 ? `T+${state.tick}` : '';
+    if (narrativeEl) {
+      if (state.tick > 0) {
+        const min = state.narrative_time_min ?? 0;
+        narrativeEl.textContent = `T+${Math.round(min)} min`;
+        narrativeEl.style.display = '';
+      } else {
+        narrativeEl.style.display = 'none';
+      }
+    }
+
+    _fireCrisisId = state.crisis_id ?? null;
+    renderFireImpacts(_fireCrisisId);
+    renderFireSensors();
   } catch (e) {
     console.warn('Sim state fetch failed:', e);
   }
+}
+
+function renderFireImpacts(crisisId) {
+  const list     = document.getElementById('fire-impact-list');
+  const evacEl   = document.getElementById('fire-evac-count');
+  const warnEl   = document.getElementById('fire-warn-count');
+  if (!list) return;
+
+  if (!crisisId) {
+    list.innerHTML = '<div class="empty-state">Symulacja nieaktywna</div>';
+    if (evacEl) evacEl.style.display = 'none';
+    if (warnEl) warnEl.style.display = 'none';
+    return;
+  }
+
+  const fireImpacts = (_lastAlerts || []).filter(a => a.crisis_id === crisisId);
+  if (!fireImpacts.length) {
+    list.innerHTML = '<div class="empty-state">Brak obiektów w strefie</div>';
+    if (evacEl) evacEl.style.display = 'none';
+    if (warnEl) warnEl.style.display = 'none';
+    return;
+  }
+
+  const evac = fireImpacts.filter(a => a.level === 'inside');
+  const warn = fireImpacts.filter(a => a.level === 'approaching');
+
+  if (evacEl) {
+    evacEl.textContent = evac.length;
+    evacEl.style.display = evac.length ? '' : 'none';
+  }
+  if (warnEl) {
+    warnEl.textContent = warn.length;
+    warnEl.style.display = warn.length ? '' : 'none';
+  }
+
+  const sorted = [...evac, ...warn];
+  list.innerHTML = sorted.map(a => {
+    const icon      = resourceTypeIcon(a.resource_name);
+    const levelCls  = a.level === 'inside' ? 'fire-impact--evac' : 'fire-impact--warn';
+    const tag       = a.level === 'inside' ? 'EWAKUACJA' : 'ZAGROŻENIE';
+    const dist      = a.distance_km != null ? `${a.distance_km.toFixed(1)} km` : '';
+    return `
+      <div class="fire-impact-row ${levelCls}">
+        <span class="fire-impact-icon">${icon}</span>
+        <span class="fire-impact-name">${a.resource_name}</span>
+        <span class="fire-impact-tag">${tag}</span>
+        <span class="fire-impact-dist">${dist}</span>
+      </div>`;
+  }).join('');
+}
+
+function renderFireSensors() {
+  const table = document.getElementById('fire-sensor-table');
+  if (!table) return;
+
+  const layer = _layerGeoJSON?.simulation_threat;
+  const sensors = layer?.features?.filter(f => f.properties?.type === 'sensor') ?? [];
+
+  if (!sensors.length) {
+    table.innerHTML = '<div class="empty-state">Symulacja nieaktywna</div>';
+    return;
+  }
+
+  table.innerHTML = sensors.map(f => {
+    const p    = f.properties;
+    const val  = p.pm25 ?? 0;
+    const cls  = val > 250 ? 'pm-crit' : val > 150 ? 'pm-high' : val > 50 ? 'pm-med' : 'pm-ok';
+    const bars = val > 250 ? '████' : val > 150 ? '███' : val > 50 ? '██' : '█';
+    return `
+      <div class="fire-sensor-row">
+        <span class="fire-sensor-name">${p.name}</span>
+        <span class="fire-sensor-val ${cls}">${Math.round(val)}</span>
+        <span class="fire-sensor-bar ${cls}">${bars}</span>
+      </div>`;
+  }).join('');
 }
 
 async function pollAlerts() {
@@ -823,6 +913,7 @@ async function pollAlerts() {
     if (!res.ok) return;
     const alerts = await res.json();
     renderAlertHud(alerts);
+    renderFireImpacts(_fireCrisisId);
   } catch (e) {
     console.warn('Alert poll failed:', e);
   }

@@ -68,20 +68,20 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7.5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5c0 .9-.48 1.68-1.2 2.12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11" r="1" fill="currentColor"/></svg>
         AI
       </button>
-      <button class="stab" data-tab="sim" title="Symulacje">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 13V6M6 13V3M9 13V8M12 13V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        SIM
+      <button class="stab" data-tab="sim" title="Symulacja pożaru">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2c0 3-3 4-3 7a3 3 0 006 0c0-3-3-4-3-7z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 12c0 1.1.9 2 2 2s2-.9 2-2" stroke="currentColor" stroke-width="1.3"/></svg>
+        POŻAR
         <span class="stab-badge stab-badge--sim" id="sim-tab-badge" style="display:none">●</span>
-      </button>
-      <button class="stab" data-tab="log" title="Dziennik zdarzeń">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        LOG
-        <span class="stab-badge" id="events-count-badge">0</span>
       </button>
       <button class="stab stab--flood" data-tab="flood" title="Infrastruktura medyczna (powódź)">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 12c1-2 2.5-3 4-2s2.5 1 4 0 3-2 4-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M2 9c1-2 2.5-3 4-2s2.5 1 4 0 3-2 4-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 2v4M6 4h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         POWÓDŹ
         <span class="stab-badge stab-badge--flood" id="flood-evac-badge" style="display:none">!</span>
+      </button>
+      <button class="stab" data-tab="log" title="Dziennik zdarzeń">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        LOG
+        <span class="stab-badge" id="events-count-badge">0</span>
       </button>
     </div>
 
@@ -118,13 +118,13 @@
       </div>
     </div>
 
-    <!-- Panel: Simulation -->
+    <!-- Panel: Fire simulation (POŻAR) -->
     <div class="tab-panel" data-panel="sim">
-      <!-- Fire simulation -->
+      <!-- Fire simulation controls -->
       <div class="sim-group">
         <div class="sim-group-header">
-          <span class="section-label">Symulacja pożaru</span>
-          <span id="sim-tick"></span>
+          <span class="section-label">Pożar — Puławy</span>
+          <span id="sim-narrative-time" class="sim-narrative-time" style="display:none"></span>
           <span id="sim-dot"></span>
           <span id="sim-label" class="sim-status-label">Gotowa</span>
         </div>
@@ -146,6 +146,28 @@
             <label>Intensywność <span id="val-int">1.0</span></label>
             <input type="range" id="rng-int" min="1" max="5" value="1" step="1" />
           </div>
+        </div>
+      </div>
+
+      <!-- Affected facilities -->
+      <div class="sim-group" id="fire-impacts-group">
+        <div class="sim-group-header">
+          <span class="section-label">Obiekty w strefie</span>
+          <span class="stab-badge stab-badge--evac" id="fire-evac-count" style="display:none"></span>
+          <span class="stab-badge stab-badge--warn" id="fire-warn-count" style="display:none"></span>
+        </div>
+        <div id="fire-impact-list" class="fire-impact-list">
+          <div class="empty-state">Symulacja nieaktywna</div>
+        </div>
+      </div>
+
+      <!-- PM2.5 sensors -->
+      <div class="sim-group" id="fire-sensors-group">
+        <div class="sim-group-header">
+          <span class="section-label">Czujniki PM2.5</span>
+        </div>
+        <div id="fire-sensor-table" class="fire-sensor-table">
+          <div class="empty-state">Symulacja nieaktywna</div>
         </div>
       </div>
 
@@ -259,7 +281,7 @@
 
     </div>
 
-    <!-- Panel: Log -->
+    <!-- Panel: Log (last) -->
     <div class="tab-panel tab-panel--log" data-panel="log">
       <div class="log-header">
         <span class="section-label">Zdarzenia</span>
