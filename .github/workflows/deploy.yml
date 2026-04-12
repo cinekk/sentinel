@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main, ci/test-deploy]
+    branches: [main]
 
 jobs:
   deploy:
