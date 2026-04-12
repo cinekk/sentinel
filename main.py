@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from database import init_db
+from database import init_db, SessionLocal, HospitalRow
 from plugins import registry
 from plugins.flood_zones import FloodZonesPlugin
 from plugins.gios import GIOSPlugin
@@ -29,9 +29,21 @@ from routers.voice import router as voice_router
 from services.flood_zones import load_flood_zones
 
 
+async def _seed_hospitals_if_empty() -> None:
+    from sqlalchemy import func, select
+    from seed_hospitals import HOSPITALS
+    async with SessionLocal() as session:
+        count = await session.scalar(select(func.count()).select_from(HospitalRow))
+        if count == 0:
+            for h in HOSPITALS:
+                session.add(HospitalRow(**h))
+            await session.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await init_db()
+    await _seed_hospitals_if_empty()
     await load_flood_zones()
     registry.register(MockBoundaryPlugin())
     registry.register(EventsPlugin())
