@@ -10,3 +10,7 @@ sentinel.xd.ventures {
 		}
 	}
 }
+
+vaultclaw.xd.ventures {
+	reverse_proxy vaultclaw-pitch:80
+}

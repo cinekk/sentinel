@@ -16,6 +16,15 @@ services:
     expose:
       - "80"
 
+  vaultclaw-pitch:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    volumes:
+      - ${CLAWCHAIN_DIR:-/home/ubuntu/clawchain}/web/public/pitch-vaultclaw:/srv:ro
+      - ./Caddyfile.vaultclaw-pitch:/etc/caddy/Caddyfile:ro
+    expose:
+      - "80"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
