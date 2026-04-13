@@ -169,6 +169,7 @@ class BriefingResponse(BaseModel):
     words: list[BriefingWordTiming]
     text: str
     duration_seconds: float
+    tts_synthesized: bool = True  # False when ElevenLabs was unavailable
 
 
 # --- Flood Scenario Script models ---

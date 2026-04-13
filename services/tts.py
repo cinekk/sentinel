@@ -29,6 +29,7 @@ class TtsResult:
     audio_base64: str
     words: list[WordTiming]
     duration_seconds: float
+    tts_synthesized: bool = True  # False when falling back to fake timings
 
 
 def _aggregate_words(alignment: dict) -> list[WordTiming]:
@@ -75,7 +76,7 @@ def _fake_timings(text: str, wpm: float = 160) -> TtsResult:
         words.append(WordTiming(w, round(t, 3), round(end, 3)))
         t = end + 0.05  # tiny gap between words
     duration = words[-1].end if words else 0.0
-    return TtsResult(audio_base64="", words=words, duration_seconds=round(duration, 2))
+    return TtsResult(audio_base64="", words=words, duration_seconds=round(duration, 2), tts_synthesized=False)
 
 
 async def synthesize_with_timestamps(text: str) -> TtsResult:
@@ -85,8 +86,12 @@ async def synthesize_with_timestamps(text: str) -> TtsResult:
     """
     api_key = settings.elevenlabs_api_key
     if not api_key:
-        log.warning("ELEVENLABS_API_KEY not set — returning text-only briefing")
+        log.error("ELEVENLABS_API_KEY not set — no audio will be produced (text-only fallback)")
         return _fake_timings(text)
+
+    masked = f"{api_key[:4]}…{api_key[-4:]}" if len(api_key) >= 8 else "***"
+    log.info("ElevenLabs TTS request: voice=%s model=%s format=%s key=%s text_len=%d",
+             VOICE_ID, MODEL_ID, OUTPUT_FORMAT, masked, len(text))
 
     url = f"{API_BASE}/text-to-speech/{VOICE_ID}/with-timestamps"
     headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
@@ -100,25 +105,43 @@ async def synthesize_with_timestamps(text: str) -> TtsResult:
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_S) as client:
             resp = await client.post(url, json=payload, headers=headers)
+            log.debug("ElevenLabs HTTP %s, content-type=%s, body_len=%d",
+                      resp.status_code, resp.headers.get("content-type", "?"), len(resp.content))
             resp.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        detail = ""
+        raw_body = ""
         try:
+            raw_body = exc.response.text
             detail = exc.response.json().get("detail", {})
             if isinstance(detail, dict):
                 detail = detail.get("message", str(detail))
+            else:
+                detail = str(detail)
         except Exception:
-            detail = str(exc)
-        log.warning("ElevenLabs %s — falling back to text-only: %s", exc.response.status_code, detail)
+            detail = raw_body or str(exc)
+        log.error("ElevenLabs HTTP %s error — falling back to text-only. Detail: %s",
+                  exc.response.status_code, detail)
         return _fake_timings(text)
-    except (httpx.TimeoutException, httpx.ConnectError) as exc:
-        log.warning("ElevenLabs unreachable — falling back to text-only: %s", exc)
+    except httpx.TimeoutException as exc:
+        log.error("ElevenLabs timed out after %ss — falling back to text-only. %s", TIMEOUT_S, exc)
+        return _fake_timings(text)
+    except httpx.ConnectError as exc:
+        log.error("ElevenLabs connection failed — falling back to text-only. %s", exc)
         return _fake_timings(text)
 
     data = resp.json()
-    audio_b64: str = data["audio_base64"]
-    words = _aggregate_words(data["alignment"])
+    audio_b64: str = data.get("audio_base64", "")
+    if not audio_b64:
+        log.error("ElevenLabs returned 200 but audio_base64 is empty — response keys: %s", list(data.keys()))
+        return _fake_timings(text)
+
+    alignment = data.get("alignment")
+    if not alignment:
+        log.error("ElevenLabs response missing 'alignment' key — keys: %s", list(data.keys()))
+        return _fake_timings(text)
+
+    words = _aggregate_words(alignment)
     duration = words[-1].end if words else 0.0
 
-    log.info("TTS done: %d words, %.1fs duration", len(words), duration)
+    log.info("TTS OK: %d words, %.1fs, audio_b64_len=%d", len(words), duration, len(audio_b64))
     return TtsResult(audio_base64=audio_b64, words=words, duration_seconds=round(duration, 2))
