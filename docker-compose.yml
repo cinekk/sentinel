@@ -20,7 +20,12 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     volumes:
-      - ${CLAWCHAIN_DIR:-/home/ubuntu/clawchain}/web/public/pitch-vaultclaw:/srv:ro
+      - type: bind
+        source: ${CLAWCHAIN_DIR:-/home/ubuntu/clawchain}/web/public/pitch-vaultclaw
+        target: /srv
+        read_only: true
+        bind:
+          create_host_path: false
       - ./Caddyfile.vaultclaw-pitch:/etc/caddy/Caddyfile:ro
     expose:
       - "80"
