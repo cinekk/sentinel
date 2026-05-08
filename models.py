@@ -34,21 +34,6 @@ class EventCreate(BaseModel):
     model: str = "manual"
 
 
-class IngestRequest(BaseModel):
-    source: EventSource
-    payload: str
-    lat: float = Field(default=0.0)
-    lon: float = Field(default=0.0)
-
-
-class IngestResponse(BaseModel):
-    event_id: int
-    category: EventCategory
-    severity: EventSeverity
-    summary: str
-    model: str
-
-
 class ResourceOut(BaseModel):
     id: str
     name: str
